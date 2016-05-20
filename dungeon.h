@@ -47,14 +47,55 @@ typedef enum wall_e
 	NSEW=NS|EW
 } wall_e;
 
-typedef struct Wall
+typedef struct WallXYZ
 {
 	PointXYZ corners[4];
 	bool exists;
-} Wall;
+} WallXYZ;
+
+typedef struct WallXY
+{
+	PointXY corner[4];
+} WallXY;
+
+enum ShapeType
+{
+	CIRCLE,
+	LINE,
+	RECTANGLE,
+	TRIANGLE,
+	CONE,
+	SPHERE,
+	CUBE
+};
+
+typedef struct Shape
+{
+	enum ShapeType type;
+	void *shape;
+	struct Shape *next;
+} Shape;
+
+typedef struct Circle
+{
+	PointXYZ centre;
+	int radius;
+} Circle;
+
+typedef struct Sphere
+{
+	PointXYZ centre;
+	int radius;
+} Sphere;
+
+typedef struct Cube
+{
+	PointXYZ centre;
+	int size;
+} Cube;
 
 typedef struct Room
 {
 	Object object;
-	Wall wall[4];
+	WallXYZ wall[4];
 } Room;

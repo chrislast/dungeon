@@ -1,37 +1,4 @@
-// SpaceInvaders.c
-// Runs on LM4F120/TM4C123
-// Jonathan Valvano and Daniel Valvano
-// This is a starter project for the edX Lab 15
-// In order for other students to play your game
-// 1) You must leave the hardware configuration as defined
-// 2) You must not add/remove any files from the project
-// 3) You must add your code only this this C file
-// I.e., if you wish to use code from sprite.c or sound.c, move that code in this file
-// 4) It must compile with the 32k limit of the free Keil
-
-// April 10, 2014
-// http://www.spaceinvaders.de/
-// sounds at http://www.classicgaming.cc/classics/spaceinvaders/sounds.php
-// http://www.classicgaming.cc/classics/spaceinvaders/playguide.php
-/* This example accompanies the books
-   "Embedded Systems: Real Time Interfacing to Arm Cortex M Microcontrollers",
-   ISBN: 978-1463590154, Jonathan Valvano, copyright (c) 2013
-
-   "Embedded Systems: Introduction to Arm Cortex M Microcontrollers",
-   ISBN: 978-1469998749, Jonathan Valvano, copyright (c) 2013
-
- Copyright 2014 by Jonathan W. Valvano, valvano@mail.utexas.edu
-    You may use, edit, run or distribute this file
-    as long as the above copyright notice remains
- THIS SOFTWARE IS PROVIDED "AS IS".  NO WARRANTIES, WHETHER EXPRESS, IMPLIED
- OR STATUTORY, INCLUDING, BUT NOT LIMITED TO, IMPLIED WARRANTIES OF
- MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE APPLY TO THIS SOFTWARE.
- VALVANO SHALL NOT, IN ANY CIRCUMSTANCES, BE LIABLE FOR SPECIAL, INCIDENTAL,
- OR CONSEQUENTIAL DAMAGES, FOR ANY REASON WHATSOEVER.
- For more information about my classes, my research, and my books, see
- http://users.ece.utexas.edu/~valvano/
- */
- /* Hardware Info
+/* Hardware Info
 // ******* Required Hardware I/O connections*******************
 // Slide pot pin 1 connected to ground
 // Slide pot pin 2 connected to PE2/AIN1
@@ -62,11 +29,34 @@
 #include <stdbool.h>
 #include "..//tm4c123gh6pm.h"
 #include "Nokia5110.h"
+#include "Texas.h"
 #include "Random.h"
-#include "TExaS.h"
 #include "global.h"
 #include "dungeon.h"
 
+#define WALL_LENGTH 100
+#define WALL_HEIGHT 45
+#define MAX_VIEW_RANGE 10
+#define DUNGEON_SIZE 4
+
+#define ASPECT_RATIO_ZOOM 40
+
+#define TOP_LEFT_CORNER (0)
+#define FIRST_CORNER (TOP_LEFT_CORNER)
+#define TOP_RIGHT_CORNER (1)
+#define BOTTOM_RIGHT_CORNER (2)
+#define BOTTOM_LEFT_CORNER (3)
+#define LAST_CORNER (BOTTOM_LEFT_CORNER)
+
+#define NORTH_WALL (0)
+#define FIRST_WALL (NORTH_WALL)
+#define EAST_WALL (1)
+#define SOUTH_WALL (2)
+#define WEST_WALL (3)
+#define LAST_WALL (WEST_WALL)
+
+#define MAX(a,b) ((a)>(b)?(a):(b))
+#define MIN(a,b) ((a)>(b)?(b):(a))
 
 Sprite monster_health[3];
 Sprite shield, sword, potion, goblin, troll;
@@ -76,15 +66,37 @@ const int nsprites = (sizeof(sprite_list)/sizeof(sprite_list[0]));
 // Global game parameters
 int score;
 int health;
-PointXYZ player = {5*32, 5*32, 50};
-int rotation;
-#define DUNGEON_SIZE 4
+typedef struct Player
+{
+	PointXYZ pos;
+	int rotation;
+} Player;
+		
 Room dungeon[DUNGEON_SIZE][DUNGEON_SIZE];
-const int room_data[DUNGEON_SIZE][DUNGEON_SIZE] = { 
+
+#if (DUNGEON_SIZE == 3)
+	Player player = {{150,WALL_HEIGHT*6/11, 50},90};
+	const int room_data[DUNGEON_SIZE][DUNGEON_SIZE] = { 
+						{ NW ,NS ,NE },
+						{ W  ,N  ,E  },
+						{ SW ,S  ,SE }};
+#elif (DUNGEON_SIZE == 4)
+	Player player = {{150,WALL_HEIGHT*6/11, 250},270};
+	const int room_data[DUNGEON_SIZE][DUNGEON_SIZE] = { 
 						{ NW ,NS ,NS ,NE },
 						{ EW ,NW ,NES,EW },
 						{ W  ,SE ,NW ,SE },
 						{ SEW,NW ,S  ,NES}};
+#elif (DUNGEON_SIZE == 6)
+	Player player = {{550,WALL_HEIGHT*6/11, 550},315};
+	const int room_data[DUNGEON_SIZE][DUNGEON_SIZE] = { 
+						{ NW ,N  ,NS ,N  ,N  ,NE },
+						{ W  ,S  ,NE ,W  ,0  ,E  },
+						{ EW ,NSW,0  ,0  ,0  ,E  },
+						{ W  ,NE ,SEW,SW ,0  ,E  },
+						{ W  ,0  ,NS ,NS ,0  ,E  },
+						{ SW ,S  ,NS ,NS ,S  ,SE }};
+#endif
 
 // Game functions
 void init_sprites(void);
@@ -93,15 +105,11 @@ void reset_board(void);
 
 /*********************************** GRAPHICS ******************************************/
 
-#define BMP_WIDTH 18
-#define BMP_HEIGHT 22
-#define SCREENH 48
-#define SCREENW 84
-
 extern char Screen[SCREENW*SCREENH/8];
 
-void myNokia5110_PrintBMP(unsigned char xpos, unsigned char ypos, const unsigned char *ptr, unsigned char threshold);
-
+Cube cubes[]={{{50,20,50},20}};
+Sphere spheres[]={{{95,10,10},10},{{50,17,50},10}};
+Shape shapes[]={{CUBE,&cubes[0],NULL},{SPHERE,&spheres[0],NULL},{SPHERE,&spheres[1],NULL}};
 /********************************** CONTROLS ******************************************/
 
 long ADCdata;
@@ -118,17 +126,13 @@ void LED1(int);
 void LED2(int);
 void Timer2_Init(unsigned long period);
 void Timer2A_Handler(void);
-	
+int sine(int degrees);
+int cosine(int degrees);
 void game_over(void);
-void draw_line(PointXY *a, PointXY *b);
-void fill(PointXY *a, PointXY *b, PointXY *c, PointXY *d);
+void draw_line(const PointXY *a, const PointXY *b);
+void fill (const WallXY *wall, int shading);
 bool my3Dto2D (PointXY *screen_pos, const PointXYZ *point);
-
-#define WALL_SIZE 100
-#define TOPLEFT 0
-#define TOPRIGHT 1
-#define BOTTOMRIGHT 2
-#define BOTTOMLEFT 3
+void draw_pixel(PointXY *p, colour_e colour);
 
 void init_game()
 {
@@ -138,97 +142,48 @@ void init_game()
 	{
 		for (j=0; j<DUNGEON_SIZE; j++)
 		{
-			for (k=0, wall=N; k<4; k++, wall *= 2)
+			for (k=FIRST_WALL, wall=NORTH; k<=LAST_WALL; k++, wall *= 2)
 			{
-#ifdef AERIAL_VIEW
-				int x=j*WALL_SIZE;
-				int y=i*WALL_SIZE;
+				int x=i*WALL_LENGTH;
+				int z=j*WALL_LENGTH;
 
 				dungeon[i][j].wall[k].exists = room_data[i][j] & wall;
 				if (dungeon[i][j].wall[k].exists)
 				{
-					for (c=TOPLEFT; c<=BOTTOMLEFT; c++)
+					for (c=FIRST_CORNER; c<=LAST_CORNER; c++)
 					{
-						if (c<BOTTOMLEFT)
-							dungeon[i][j].wall[k].corners[c].z = WALL_SIZE;
-						else
-							dungeon[i][j].wall[k].corners[c].z = 0;
-						switch(wall)
-						{
-							case N:
-								if (c%2)
-									dungeon[i][j].wall[k].corners[c].x = x + WALL_SIZE;
-								else
-									dungeon[i][j].wall[k].corners[c].x = x;
-								dungeon[i][j].wall[k].corners[c].y = y;
-								break;
-							case E:
-								if (c%2)
-									dungeon[i][j].wall[k].corners[c].y = y + WALL_SIZE;
-								else
-									dungeon[i][j].wall[k].corners[c].y = y;
-								dungeon[i][j].wall[k].corners[c].x = x + WALL_SIZE;
-								break;
-							case S:
-								if (c%2)
-									dungeon[i][j].wall[k].corners[c].x = x;
-								else
-									dungeon[i][j].wall[k].corners[c].x = x + WALL_SIZE;
-								dungeon[i][j].wall[k].corners[c].y = y + WALL_SIZE;
-								break;
-							case W:
-								if (c%2)
-									dungeon[i][j].wall[k].corners[c].y = y;
-								else
-									dungeon[i][j].wall[k].corners[c].y = y + WALL_SIZE;
-								dungeon[i][j].wall[k].corners[c].x = x;
-								break;
-							default:
-								break;
-						}
-					}
-				}
-#else
-				int x=i*WALL_SIZE;
-				int z=j*WALL_SIZE;
-
-				dungeon[i][j].wall[k].exists = room_data[i][j] & wall;
-				if (dungeon[i][j].wall[k].exists)
-				{
-					for (c=TOPLEFT; c<=BOTTOMLEFT; c++)
-					{
-						if (c<BOTTOMRIGHT)
-							dungeon[i][j].wall[k].corners[c].y = WALL_SIZE;
+						if (c == TOP_LEFT_CORNER || c == TOP_RIGHT_CORNER)
+							dungeon[i][j].wall[k].corners[c].y = WALL_HEIGHT;
 						else
 							dungeon[i][j].wall[k].corners[c].y = 0;
 						switch(wall)
 						{
 							case NORTH:
-								if (c%3)
-									dungeon[i][j].wall[k].corners[c].z = z + WALL_SIZE;
+								if (c == TOP_RIGHT_CORNER || c == BOTTOM_RIGHT_CORNER)
+									dungeon[i][j].wall[k].corners[c].z = z + WALL_LENGTH;
 								else
 									dungeon[i][j].wall[k].corners[c].z = z;
 								dungeon[i][j].wall[k].corners[c].x = x;
 								break;
 							case EAST:
-								if (c%3)
-									dungeon[i][j].wall[k].corners[c].x = x + WALL_SIZE;
+								if (c == TOP_RIGHT_CORNER || c == BOTTOM_RIGHT_CORNER)
+									dungeon[i][j].wall[k].corners[c].x = x + WALL_LENGTH;
 								else
 									dungeon[i][j].wall[k].corners[c].x = x;
-								dungeon[i][j].wall[k].corners[c].z = z + WALL_SIZE;
+								dungeon[i][j].wall[k].corners[c].z = z + WALL_LENGTH;
 								break;
 							case SOUTH:
-								if (c%3)
+								if (c == TOP_RIGHT_CORNER || c == BOTTOM_RIGHT_CORNER)
 									dungeon[i][j].wall[k].corners[c].z = z;
 								else
-									dungeon[i][j].wall[k].corners[c].z = z + WALL_SIZE;
-								dungeon[i][j].wall[k].corners[c].x = x + WALL_SIZE;
+									dungeon[i][j].wall[k].corners[c].z = z + WALL_LENGTH;
+								dungeon[i][j].wall[k].corners[c].x = x + WALL_LENGTH;
 								break;
 							case WEST:
-								if (c%3)
+								if (c == TOP_RIGHT_CORNER || c == BOTTOM_RIGHT_CORNER)
 									dungeon[i][j].wall[k].corners[c].x = x;
 								else
-									dungeon[i][j].wall[k].corners[c].x = x + WALL_SIZE;
+									dungeon[i][j].wall[k].corners[c].x = x + WALL_LENGTH;
 								dungeon[i][j].wall[k].corners[c].z = z;
 								break;
 							default:
@@ -236,7 +191,6 @@ void init_game()
 						}
 					}
 				}
-#endif
 			}
 		}
 	}
@@ -250,93 +204,150 @@ void init_game()
 			p2.x = p3.x = j * SCALE + SCALE;
 			p1.y = p2.y = i * SCALE;
 			p3.y = p4.y = i * SCALE + SCALE;
-			if (room_data[i][j] & N) draw_line(&p1,&p2);
-			if (room_data[i][j] & E) draw_line(&p2,&p3);
-			if (room_data[i][j] & S) draw_line(&p3,&p4);
-			if (room_data[i][j] & W) draw_line(&p4,&p1);
+			if (room_data[i][j] & NORTH) draw_line(&p1,&p2);
+			if (room_data[i][j] & EAST)  draw_line(&p2,&p3);
+			if (room_data[i][j] & SOUTH) draw_line(&p3,&p4);
+			if (room_data[i][j] & WEST)  draw_line(&p4,&p1);
 		}
 	}
 	Nokia5110_DisplayBuffer();
-	Delay1ms(3000);
+	Delay1ms(1000);
+}
+
+void draw_shape(Shape *shape)
+{
+	PointXY xy;
+	PointXYZ xyz;
+	switch (shape->type)
+	{
+		case CUBE:
+		{
+			Cube* cube=shape->shape;
+			int s = cube->size/2;
+			int xmin=cube->centre.x - s;
+			int xmax=cube->centre.x + s;
+			int ymin=cube->centre.y - s;
+			int ymax=cube->centre.y + s;
+			int zmin=cube->centre.z - s;
+			int zmax=cube->centre.z + s;
+			bool temp;
+			for (xyz.x = xmin; xyz.x<=xmax; xyz.x++)
+				for (xyz.y = ymin; xyz.y<=ymax; xyz.y++)
+					for (xyz.z = zmin; xyz.z<=zmax; xyz.z++)
+						if (xyz.x==xmin || xyz.x==xmax || xyz.y==ymin || xyz.y==ymax || xyz.z==zmin || xyz.z==zmax)
+							if (my3Dto2D(&xy,&xyz))
+								draw_pixel(&xy,BLACK);
+			break;
+		}
+		default:
+		{
+			break;
+		}
+	}
+}
+
+void draw_object()
+{
+	int i, imax = sizeof(shapes)/sizeof(Shape);
+	
+	for (i=0; i < imax; i++)
+	{
+		draw_shape(&shapes[i]);
+	}
 }
 
 /*************************** CODE *****************************/
 
+void draw_maze (void)
+{
+	// start at maximum (possibly off map) distance from camera
+	int xmax=player.pos.z/100+MIN(DUNGEON_SIZE,MAX_VIEW_RANGE);
+	int xmin=player.pos.z/100-MIN(DUNGEON_SIZE,MAX_VIEW_RANGE);
+	int ymax=player.pos.x/100+MIN(DUNGEON_SIZE,MAX_VIEW_RANGE);
+	int ymin=player.pos.x/100-MIN(DUNGEON_SIZE,MAX_VIEW_RANGE);
+	int x,y,wall;
+	const WallXY ceiling = {{{0,SCREENH/2},{SCREENW-1,SCREENH/2},{SCREENW-1,0},{0,0}}};
+	fill(&ceiling,7);
+	while (ymin <= ymax)
+	{
+		for (y=ymin; y<=ymax; y++)
+		{
+			for (x=xmin; x<=xmax; x++)
+			{
+				// if it's not on the map
+				if ((x < 0 || y < 0 || x >= DUNGEON_SIZE || y >= DUNGEON_SIZE) || 
+						// or not on the edge of the current display horizon
+						(x != xmin && x != xmax && y != ymin && y != ymax))
+				{
+					// then get next cell
+					continue;
+				}
+				// show walls of current cell
+				for (wall=FIRST_WALL; wall<=LAST_WALL; wall++)
+				{
+					if (dungeon[y][x].wall[wall].exists)
+					{
+						int corner;
+						bool in_front = false;  // wall is in front of camera
+						WallXY wall2d;
+						// if wall is not visible from camera position then get the next wall
+						if (((wall == NORTH_WALL) && (player.pos.x/WALL_LENGTH < y)) ||
+						  	((wall == EAST_WALL)  && (player.pos.z/WALL_LENGTH > x+1)) ||
+								((wall == SOUTH_WALL) && (player.pos.x/WALL_LENGTH > y+1)) ||
+								((wall == WEST_WALL)  && (player.pos.z/WALL_LENGTH < x)))
+						{
+							continue;
+						}
+						// calculate screen-based coordinates of each corner
+						for (corner = FIRST_CORNER; corner <= LAST_CORNER; corner++)
+						{
+							in_front |= my3Dto2D (&wall2d.corner[corner], &dungeon[y][x].wall[wall].corners[corner]);
+						}
+						// if any of the corners are in front of the camera then attempt to draw the wall (still could be off screen)
+						if (in_front)
+						{
+							fill(&wall2d,3);
+						}
+					}
+				}
+//				draw_object();
+			}
+		}
+		xmin++; xmax--; ymin++; ymax--;
+	}
+}
+
 /* Main program */
 int main(void)
 {
-	init();
+ 	init();
 	Nokia5110_DisplayBuffer();
 	init_game();
 
 	while (1)
 	{
-#ifdef TEST2D_DISPLAY_CODE
-		int i;
-		int step = 3;
-		PointXY one, two, three, four;
-		one.x=-SCREENW; one.y=0; two.x = SCREENW*2; two.y = SCREENH-1; 
-		for (i=-SCREENW; i<SCREENW*2; i+=step)
-		{
-			one.x += step;
-			two.x -= step;
-			draw_line(&one,&two);
-			Nokia5110_DisplayBuffer();
-		}
-		one.x=5; one.y=7; two.x = 55; two.y=15; three.x=one.x; three.y=44; four.x=two.x; four.y=47;
-		fill(&one,&two,&three,&four);
-		one.x=12; one.y=22; two.x = 32; two.y=18; three.x=12; three.y=32; four.x=32; four.y=34;
-		fill(&one,&two,&three,&four);
-		one.x=42; one.y=18; two.x = 62; two.y=22; three.x=42; three.y=34; four.x=62; four.y=30;
-		fill(&one,&two,&three,&four);
+		Nokia5110_ClearBuffer();
+		draw_maze();
+		Delay1ms(20);
 		Nokia5110_DisplayBuffer();
-#else
-		PointXY corner[4];
-		bool visible=false;
-		int i,j,wall,c;
-		player.x = 150;
-		player.y = 060;
-		player.z = 250;
-		rotation = 0;
-		for (rotation=0;;rotation = ++rotation % 360)
+		player.rotation = (player.rotation + ADCdata + 360) % 360;
+		if (GPIO_PORTE_DATA_R & BIT(0))
 		{
-			Nokia5110_ClearBuffer();
-
-			for (i=0; i<DUNGEON_SIZE; i++)
-			{
-				for (j=0; j<DUNGEON_SIZE; j++)
-				{
-					for (wall=0; wall<4; wall++)
-					{
-						if ((wall==0 && player.x < i*WALL_SIZE) ||
-								(wall==1 && player.z < j*WALL_SIZE) ||
-								(wall==2 && player.x > i*WALL_SIZE+WALL_SIZE) ||
-								(wall==3 && player.z > j*WALL_SIZE+WALL_SIZE))
-							break;
-						if (dungeon[i][j].wall[wall].exists)
-						{
-							visible = true;
-							for (c=TOPLEFT; c<=BOTTOMLEFT; c++)
-							{
-								visible &= my3Dto2D (&corner[c], &dungeon[i][j].wall[wall].corners[c]);
-							}
-							if (visible)
-							{
-								fill(&corner[TOPLEFT],&corner[TOPRIGHT],&corner[BOTTOMLEFT],&corner[BOTTOMRIGHT]);
-							}
-						}
-					}
-				}
-			}
-			Delay1ms(50);
-			Nokia5110_DisplayBuffer();
+			int x,y;
+			player.pos.x += ((sine(player.rotation)>>13)+1)>>1;
+			y = player.pos.x / WALL_LENGTH;
+			if (dungeon[y][x].wall[SOUTH_WALL].exists && (player.pos.x % WALL_LENGTH > WALL_LENGTH * 9 / 10))
+				player.pos.x = y * WALL_LENGTH + WALL_LENGTH * 9 / 10;
+			else if (dungeon[y][x].wall[NORTH_WALL].exists && (player.pos.x % WALL_LENGTH < WALL_LENGTH * 1 / 10))
+				player.pos.x = y * WALL_LENGTH + WALL_LENGTH * 1 / 10;
+			player.pos.z += ((cosine(player.rotation)>>13)+1)>>1;
+			x = player.pos.z / WALL_LENGTH;
+			if (dungeon[y][x].wall[EAST_WALL].exists && (player.pos.z % WALL_LENGTH > WALL_LENGTH * 9 / 10))
+				player.pos.z = x * WALL_LENGTH + WALL_LENGTH * 9 / 10;
+			else if (dungeon[y][x].wall[WEST_WALL].exists && (player.pos.z % WALL_LENGTH < WALL_LENGTH * 1 / 10))
+				player.pos.z = x * WALL_LENGTH + WALL_LENGTH * 1 / 10;
 		}
-#endif
-		break;
 	}
-	Delay100ms(1); // delay 5 seconds
-	game_over();
-	while(1){}
 }
 /* Initialisation of constant global sprite values */
 void init_sprites(void){
@@ -376,56 +387,7 @@ void destroy(Sprite *s){
 	s->bitmapn=0;
 }
 
-/* Output a bitmap to the screen buffer */
-void myNokia5110_PrintBMP(unsigned char xpos, unsigned char ypos, const unsigned char *ptr, unsigned char threshold){
-  long width = ptr[BMP_WIDTH], height = ptr[BMP_HEIGHT], i, j;
-  unsigned short screenx, screeny;
-  unsigned char mask;
-  // check for clipping
-  if((height <= 0) ||              // bitmap is unexpectedly encoded in top-to-bottom pixel order
-     ((width%2) != 0) ||           // must be even number of columns
-     ((xpos + width) > SCREENW) || // right side cut off
-     (ypos < (height - 1)) ||      // top cut off
-     (ypos > SCREENH))           { // bottom cut off
-		 return;
-  }
-  if(threshold > 14){
-    threshold = 14;             // only full 'on' turns pixel on
-  }
-  // bitmaps are encoded backwards, so start at the bottom left corner of the image
-  screeny = ypos/8;
-  screenx = xpos + SCREENW*screeny;
-  mask = ypos%8;                // row 0 to 7
-  mask = 0x01<<mask;            // now stores a mask 0x01 to 0x80
-  j = ptr[10];                  // byte 10 contains the offset where image data can be found
-  for(i=1; i<=(width*height/2); i=i+1){
-    // the left pixel is in the upper 4 bits
-    if(((ptr[j]>>4)&0xF) > threshold)
-      Screen[screenx] |= mask;
-    screenx = screenx + 1;
-    // the right pixel is in the lower 4 bits
-    if((ptr[j]&0xF) > threshold)
-      Screen[screenx] |= mask;
-    screenx = screenx + 1;
-    j = j + 1;
-    if((i%(width/2)) == 0){     // at the end of a row
-      if(mask > 0x01){
-        mask = mask>>1;
-      } else{
-        mask = 0x80;
-        screeny = screeny - 1;
-      }
-      screenx = xpos + SCREENW*screeny;
-      // bitmaps are 32-bit word aligned
-      switch((width/2)%4){      // skip any padding
-        case 0: j = j + 0; break;
-        case 1: j = j + 3; break;
-        case 2: j = j + 2; break;
-        case 3: j = j + 1; break;
-      }
-    }
-  }
-}
+
 /* Draw all active sprites */
 void draw_board(void){
 	int i;
@@ -488,7 +450,7 @@ void Timer2A_Handler(void){
   TIMER2_ICR_R = TIMER_ICR_TATOCINT;   // acknowledge timer2A timeout
   TimerCount2A++;
   Semaphore2A = 1; // trigger
-  ADCdata = (((long)ADC0_In()-515L)*28L)>>10;    // 3 - collect an ADC sample of player x pos
+  ADCdata = ((long)(ADC0_In()-0x7FF))>>8;    // 3 - collect an ADC sample of player x pos
 }
 /* General purpose 100ms delay */
 void Delay100ms(unsigned long count){unsigned long volatile time;
@@ -708,175 +670,88 @@ void draw_pixel(PointXY *p, colour_e colour)
 	}
 }
 
-void draw_line(PointXY *a, PointXY *b)
+/* Draw the visible part of a line between two screen co-ordinates */
+void draw_line(const PointXY *a, const PointXY *b)
 {
-	int x, y, scale;
-	PointXY *lo=a;
-	PointXY *hi=b;
-	if (abs(a->x - b->x) > abs(a->y - b->y))
+	int slope,x,y;
+
+	// if line is not vertical
+//	if (a->x != b->x)
+	if (MAX(a->x,b->x)-MIN(a->x,b->x) > MAX(a->y,b->y)-MIN(a->y,b->y))
 	{
-		if (a->x > b->x)
-		{ lo = b; hi = a; }
-		scale = ((hi->y - lo->y) << 6) / (hi->x - lo->x);
-		for (x=lo->x; x<=hi->x; x++)
+  	// draw a pixel for each valid x position between line start and end
+		for (x=MAX(0,MIN(a->x,b->x)); x<MIN(SCREENW,MAX(a->x,b->x)); x++)
 		{
-			PointXY p;
-			p.x = x;
-			p.y = (((x - lo->x) * scale) >> 6) + lo->y;
-			draw_pixel(&p, BLACK);
+			slope = (((a->y - b->y)<<15)/(a->x - b->x));
+			y = (slope*(x - a->x)>>15) + a->y;
+			if (y>=0 && y<SCREENH)
+				Screen[x+y/8*SCREENW] |= 1<<(y%8);
 		}
 	}
+	// if line is not horizontal
+//	if (a->y != b->y)
 	else
 	{
-		if (a->y > b->y)
-		{ lo = b; hi = a; }
-		scale = ((hi->x - lo->x) << 6) / (hi->y - lo->y);
-		for (y=lo->y; y<=hi->y; y++)
+	// draw a pixel for each valid y position between line start and end
+		for (y=MAX(0,MIN(a->y,b->y)); y<MIN(SCREENH,MAX(a->y,b->y)); y++)
 		{
-			PointXY p;
-			p.x = (((y - lo->y) * scale) >> 6) + lo->x;
-			p.y = y;
-			draw_pixel(&p, BLACK);
+			slope = (((a->x - b->x)<<15)/(a->y - b->y));
+			x = (slope*(y - a->y)>>15) + a->x;
+			if (x>=0 && x<SCREENW)
+				Screen[x+y/8*SCREENW] |= 1<<(y%8);
 		}
 	}
 }
 
-bool sign (PointXY *p, PointXY *a, PointXY *b)
+void fill (const WallXY *wall, int shading)
 {
-	return ((p->x - b->x) * (a->y - b->y) - (a->x - b->x) * (p->y - b->y))>>31;
-}
+	int xmin = wall->corner[TOP_LEFT_CORNER].x+1;
+	int xmax = wall->corner[TOP_RIGHT_CORNER].x-1;
+	int x,y,ymin,ymax;
 
-bool inside_triangle(PointXY *p, PointXY *a, PointXY *b, PointXY *c)
-{
-	bool b1,b2,b3;
-
-	b1 = sign(p,a,b);
-	b2 = sign(p,b,c);
-	b3 = sign(p,c,a);
-
-	return ((b1 == b2)&&(b2==b3));
-}
-
-#define MAX(a,b) ((a)>(b)?(a):(b))
-#define MIN(a,b) ((a)<(b)?(a):(b))
-
-bool inside_wall(PointXY *p, PointXY *topleft, PointXY *topright, PointXY *bottomleft, PointXY *bottomright)
-{
-	// sanity check corners
-	if ((topleft->x != bottomleft->x) ||
-			(topright->x != bottomright->x))
-		for (;;)
-		{
-		// hang for debug
+	// fill the wall pixels
+	for (x=xmin; x<=xmax; x++)
+	{
+		// Move to first on-screen X position
+		if (x<0) x=0;
+		// If X is off right side of screen or already past end of shape then we're finished
+		if (x > xmax || x >= SCREENW)
 			break;
-		}
-	// check vertical bounds are ok
-	if (p->x >= MAX(topleft->x,bottomleft->x) &&
-			p->x <= MIN(topright->x,bottomright->x))
-	{
-		// check if its in the middle of the shape
-		if (p->y >= MAX(topleft->y,topright->y) && p->y <= MIN(bottomleft->y,bottomright->y))
-			return true;
-		// Check if it could be in the top triangle
-		else if (p->y >= MIN(topleft->y,topright->y) && p->y <= MAX(topleft->y,topright->y))
+		// calculate the y values for current x position
+		ymax = wall->corner[TOP_LEFT_CORNER].y + 
+					(((wall->corner[TOP_RIGHT_CORNER].y - wall->corner[TOP_LEFT_CORNER].y) * 
+					(((x - wall->corner[TOP_LEFT_CORNER].x) << 16) /
+						(wall->corner[TOP_RIGHT_CORNER].x - wall->corner[TOP_LEFT_CORNER].x))) >> 16);
+		ymin = wall->corner[BOTTOM_LEFT_CORNER].y + 
+					(((wall->corner[BOTTOM_RIGHT_CORNER].y - wall->corner[BOTTOM_LEFT_CORNER].y) * 
+					(((x - wall->corner[BOTTOM_LEFT_CORNER].x) << 16) / 
+						(wall->corner[BOTTOM_RIGHT_CORNER].x - wall->corner[BOTTOM_LEFT_CORNER].x))) >> 16);
+		for (y = ymin; y < ymax; y++)
 		{
-			PointXY p2;
-			if (topleft->y > topright->y)
-			{
-				p2.x = topright->x;
-				p2.y = topleft->y;
-			}
+			if (y < 0) y=0;
+			// If Y is off bottom of screen or already past end of shape then fill next column
+			if (y > ymax || y >= SCREENH)
+				break;
+			// paint a white pixel - or a texture pixel
+			if ((!((x+player.rotation)%shading) && !((y+player.rotation)%shading)))
+				Screen[x+y/8*SCREENW] |= 1<<(y%8);
 			else
-			{
-				p2.x = topleft->x;
-				p2.y = topright->y;
-			}
-			return inside_triangle(p,topleft,topright,&p2);
-		}
-		// Check if it could be in the bottom triangle
-		else if (p->y >= MIN(bottomleft->y,bottomright->y) && p->y <= MAX(bottomleft->y,bottomright->y))
-		{
-			PointXY p2;
-			if (bottomleft->y > bottomright->y)
-			{
-				p2.x = bottomleft->x;
-				p2.y = bottomright->y;
-			}
-			else
-			{
-				p2.x = bottomright->x;
-				p2.y = bottomleft->y;
-			}
-			return inside_triangle(p,topleft,topright,&p2);
+				Screen[x+y/8*SCREENW] &= ~(1<<(y%8));
 		}
 	}
-	return false;
-}
-
-void fill (PointXY *a, PointXY *b, PointXY *c, PointXY *d)
-{
-	int i,j;
-
-	enum {
-		topleft=0,
-		bottomleft=1,
-		topright=2,
-		bottomright=3
-	};
-	
-	PointXY *pXY[4];
-	PointXY *pSwap;
-
-	pXY[0]=a;
-	pXY[1]=b;
-	pXY[2]=c;
-	pXY[3]=d;
-	// sort points to get correct orientation for wall
-	for (i=0; i<3; i++)
-	{
-		if (pXY[i]->x > pXY[i+1]->x || (pXY[i]->x == pXY[i+1]->x && pXY[i]->y > pXY[i+1]->y))
-		{
-			pSwap = pXY[i];
-			pXY[i] = pXY[i+1];
-			pXY[i+1] = pSwap;
-			i=0;
-		}
-	}
-	// normalize screen positions to -1 <= x <= SCREENW, -1 <= y <= SCREENH
-	
-	
-	for (j=MIN(pXY[topleft]->y,pXY[topright]->y); j<=MAX(pXY[bottomright]->y,pXY[bottomleft]->y); j++)
-	{
-		for (i=MIN(pXY[topleft]->x,pXY[bottomleft]->x); i<=MAX(pXY[bottomright]->x,pXY[topright]->x); i++)
-		{
-			PointXY p;
-			p.x = i;
-			p.y = j;
-			if (inside_wall(&p,pXY[topleft],pXY[topright],pXY[bottomleft],pXY[bottomright]))
-				draw_pixel(&p,WHITE);
-		}
-		draw_line(pXY[topleft],pXY[topright]);
-		draw_line(pXY[topleft],pXY[bottomleft]);
-		draw_line(pXY[topright],pXY[bottomright]);
-		draw_line(pXY[bottomleft],pXY[bottomright]);
-	}
-}
-
-int isqrt(int n)
-{
-  int b = 0;
-	n++;
-  while(n >= 0)
-  {
-    n = n - b;
-    b = b + 1;
-    n = n - b;
-  }
-  return b - 1;
+	// draw the wall outline
+	draw_line(&wall->corner[TOP_LEFT_CORNER],
+						&wall->corner[TOP_RIGHT_CORNER]);
+	draw_line(&wall->corner[TOP_RIGHT_CORNER],
+						&wall->corner[BOTTOM_RIGHT_CORNER]);
+	draw_line(&wall->corner[BOTTOM_RIGHT_CORNER],
+						&wall->corner[BOTTOM_LEFT_CORNER]);
+	draw_line(&wall->corner[BOTTOM_LEFT_CORNER],
+						&wall->corner[TOP_LEFT_CORNER]);
 }
 
 // one quarter of a sine wave in 1 degree steps scaled 2^15 to be transformed to full 360 degrees for sin and cos
-const int sinS15[90] = {0,571,1143,1714,2285,2855,3425,3993,4560,5126,5690,6252,6812,7371,7927,8480,9032,9580,10125,10668,11207,11743,12275,12803,13327,13848,14364,14876,15383,15886,16384,16876,17364,17846,18323,18794,19260,19720,20173,20621,21062,21497,21926,22347,22762,23170,23571,23964,24351,24730,25101,25465,25821,26169,26509,26841,27165,27481,27788,28087,28377,28659,28932,29196,29451,29697,29935,30163,30381,30591,30791,30982,31164,31336,31498,31651,31794,31928,32051,32165,32270,32364,32449,32523,32588,32643,32688,32723,32748,32763};
+const int sinS15[91] = {0,571,1143,1714,2285,2855,3425,3993,4560,5126,5690,6252,6812,7371,7927,8480,9032,9580,10125,10668,11207,11743,12275,12803,13327,13848,14364,14876,15383,15886,16384,16876,17364,17846,18323,18794,19260,19720,20173,20621,21062,21497,21926,22347,22762,23170,23571,23964,24351,24730,25101,25465,25821,26169,26509,26841,27165,27481,27788,28087,28377,28659,28932,29196,29451,29697,29935,30163,30381,30591,30791,30982,31164,31336,31498,31651,31794,31928,32051,32165,32270,32364,32449,32523,32588,32643,32688,32723,32748,32763,32767};
 
 int sine(int degrees)
 {
@@ -886,10 +761,10 @@ int sine(int degrees)
 	if (i < 90)
 		return sinS15[i];
 	if (i < 180)
-		return sinS15[89-i%90];
+		return sinS15[90-i%90];
 	if (i < 270)
 		return -sinS15[i%90];
-	return -sinS15[89-i%90];
+	return -sinS15[90-i%90];
 }
 
 int cosine(int degrees)
@@ -897,23 +772,27 @@ int cosine(int degrees)
 	return (sine(degrees+90));
 }
 
-#define ZOOM 32
 bool my3Dto2D (PointXY *screen_pos, const PointXYZ *point)
 {
-	int x = point->x - player.x;
-	int y = point->y - player.y;
-	int z = point->z - player.z;
-	int sinR = sine(rotation);
-	int cosR = cosine(rotation);
+	bool retval = true;
+	int x = point->x - player.pos.x;
+	int y = point->y - player.pos.y;
+	int z = point->z - player.pos.z;
+	long sinR = sine(player.rotation);
+	long cosR = cosine(player.rotation);
 	long dx = cosR*x - sinR*z;
 	long dy = y<<15;
 	long dz = cosR*z + sinR*x;
-	if (dz <= 0) return false;
-	screen_pos->x = ZOOM*dx/dz + SCREENW/2;
-	screen_pos->y = ZOOM*dy/dz + SCREENH/2;
-	if (screen_pos->x < -SCREENW/2) screen_pos->x = -SCREENW/2;
-	else if (screen_pos->x > SCREENW+SCREENW/2) screen_pos->x = SCREENW+SCREENW/2;
-	if (screen_pos->y < -SCREENH/2) screen_pos->y = -SCREENH/2;
-	else if (screen_pos->y > SCREENH+SCREENH/2) screen_pos->y = SCREENH+SCREENH/2;
-	return true;
+	if (dz <= 0)
+	{
+		screen_pos->x = (ASPECT_RATIO_ZOOM*dx>>15) + SCREENW/2;
+		screen_pos->y = (ASPECT_RATIO_ZOOM*dy>>15) + SCREENH/2;
+		retval = false;
+	}
+	else
+	{
+		screen_pos->x = ASPECT_RATIO_ZOOM*dx/dz + SCREENW/2;
+		screen_pos->y = ASPECT_RATIO_ZOOM*dy/dz + SCREENH/2;
+	}
+	return retval;
 }
