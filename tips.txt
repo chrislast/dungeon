@@ -1,0 +1,1 @@
+tail --bytes=+118 test.bmp | od -An -tx1 -v -w12 | sed 's/ //g;s/0/ /g'
