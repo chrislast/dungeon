@@ -21,7 +21,9 @@ typedef struct PointXY
 
 typedef struct Object
 {
-	char* bitmap[3];
+	const unsigned char* bitmap[5];
+	PointXYZ pos;
+	struct Object* next;
 } Object;
 
 typedef enum wall_e
@@ -58,44 +60,9 @@ typedef struct WallXY
 	PointXY corner[4];
 } WallXY;
 
-enum ShapeType
-{
-	CIRCLE,
-	LINE,
-	RECTANGLE,
-	TRIANGLE,
-	CONE,
-	SPHERE,
-	CUBE
-};
-
-typedef struct Shape
-{
-	enum ShapeType type;
-	void *shape;
-	struct Shape *next;
-} Shape;
-
-typedef struct Circle
-{
-	PointXYZ centre;
-	int radius;
-} Circle;
-
-typedef struct Sphere
-{
-	PointXYZ centre;
-	int radius;
-} Sphere;
-
-typedef struct Cube
-{
-	PointXYZ centre;
-	int size;
-} Cube;
 
 typedef struct Room
 {
-	Object object;
+	Object* objects;
 	WallXYZ wall[4];
 } Room;

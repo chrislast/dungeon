@@ -37,7 +37,7 @@
 #define WALL_LENGTH 100
 #define WALL_HEIGHT 45
 #define MAX_VIEW_RANGE 10
-#define DUNGEON_SIZE 4
+#define DUNGEON_SIZE 6
 
 #define ASPECT_RATIO_ZOOM 40
 
@@ -58,10 +58,8 @@
 #define MAX(a,b) ((a)>(b)?(a):(b))
 #define MIN(a,b) ((a)>(b)?(b):(a))
 
-Sprite monster_health[3];
-Sprite shield, sword, potion, goblin, troll;
-Sprite* sprite_list[8];
-const int nsprites = (sizeof(sprite_list)/sizeof(sprite_list[0]));
+// bitmap files
+#include "bmp.txt"
 
 // Global game parameters
 int score;
@@ -96,6 +94,7 @@ Room dungeon[DUNGEON_SIZE][DUNGEON_SIZE];
 						{ W  ,NE ,SEW,SW ,0  ,E  },
 						{ W  ,0  ,NS ,NS ,0  ,E  },
 						{ SW ,S  ,NS ,NS ,S  ,SE }};
+	Object troll={{troll_large2,troll_med0,troll_small0,troll_tiny0,troll_tiny0},{50,WALL_HEIGHT,50},NULL};
 #endif
 
 // Game functions
@@ -107,9 +106,6 @@ void reset_board(void);
 
 extern char Screen[SCREENW*SCREENH/8];
 
-Cube cubes[]={{{50,20,50},20}};
-Sphere spheres[]={{{95,10,10},10},{{50,17,50},10}};
-Shape shapes[]={{CUBE,&cubes[0],NULL},{SPHERE,&spheres[0],NULL},{SPHERE,&spheres[1],NULL}};
 /********************************** CONTROLS ******************************************/
 
 long ADCdata;
@@ -133,15 +129,20 @@ void draw_line(const PointXY *a, const PointXY *b);
 void fill (const WallXY *wall, int shading);
 bool my3Dto2D (PointXY *screen_pos, const PointXYZ *point);
 void draw_pixel(PointXY *p, colour_e colour);
+int isqrt(int n);
+int distance (PointXYZ a, PointXYZ b);
 
 void init_game()
 {
 	int i,j,k,wall,c;
-
+	// For each room
 	for (i=0; i<DUNGEON_SIZE; i++)
 	{
 		for (j=0; j<DUNGEON_SIZE; j++)
 		{
+			// Clear the object list
+			dungeon[i][j].objects = NULL;
+			// Store the wall co-ordinates
 			for (k=FIRST_WALL, wall=NORTH; k<=LAST_WALL; k++, wall *= 2)
 			{
 				int x=i*WALL_LENGTH;
@@ -194,6 +195,9 @@ void init_game()
 			}
 		}
 	}
+	// add objects to rooms
+		dungeon[0][0].objects=&troll;
+	// Draw the map on screen briefly
 	for (i=0; i<DUNGEON_SIZE; i++)
 	{
 		for (j=0; j<DUNGEON_SIZE; j++)
@@ -214,70 +218,26 @@ void init_game()
 	Delay1ms(1000);
 }
 
-void draw_shape(Shape *shape)
-{
-	PointXY xy;
-	PointXYZ xyz;
-	switch (shape->type)
-	{
-		case CUBE:
-		{
-			Cube* cube=shape->shape;
-			int s = cube->size/2;
-			int xmin=cube->centre.x - s;
-			int xmax=cube->centre.x + s;
-			int ymin=cube->centre.y - s;
-			int ymax=cube->centre.y + s;
-			int zmin=cube->centre.z - s;
-			int zmax=cube->centre.z + s;
-			bool temp;
-			for (xyz.x = xmin; xyz.x<=xmax; xyz.x++)
-				for (xyz.y = ymin; xyz.y<=ymax; xyz.y++)
-					for (xyz.z = zmin; xyz.z<=zmax; xyz.z++)
-						if (xyz.x==xmin || xyz.x==xmax || xyz.y==ymin || xyz.y==ymax || xyz.z==zmin || xyz.z==zmax)
-							if (my3Dto2D(&xy,&xyz))
-								draw_pixel(&xy,BLACK);
-			break;
-		}
-		default:
-		{
-			break;
-		}
-	}
-}
-
-void draw_object()
-{
-	int i, imax = sizeof(shapes)/sizeof(Shape);
-	
-	for (i=0; i < imax; i++)
-	{
-		draw_shape(&shapes[i]);
-	}
-}
-
 /*************************** CODE *****************************/
 
 void draw_maze (void)
 {
 	// start at maximum (possibly off map) distance from camera
-	int xmax=player.pos.z/100+MIN(DUNGEON_SIZE,MAX_VIEW_RANGE);
-	int xmin=player.pos.z/100-MIN(DUNGEON_SIZE,MAX_VIEW_RANGE);
-	int ymax=player.pos.x/100+MIN(DUNGEON_SIZE,MAX_VIEW_RANGE);
-	int ymin=player.pos.x/100-MIN(DUNGEON_SIZE,MAX_VIEW_RANGE);
-	int x,y,wall;
+	int px = player.pos.z/100;
+	int py = player.pos.x/100;
+	int x,y,wall,range;
 	const WallXY ceiling = {{{0,SCREENH/2},{SCREENW-1,SCREENH/2},{SCREENW-1,0},{0,0}}};
-	fill(&ceiling,7);
-	while (ymin <= ymax)
+	const WallXY floor = {{{0,SCREENH-1},{SCREENW-1,SCREENH-1},{SCREENW-1,SCREENH/2},{0,SCREENH/2}}};
+	fill(&ceiling,1);
+	fill(&floor,4);
+	for (range = MIN(DUNGEON_SIZE,MAX_VIEW_RANGE); range >=0; range--)
 	{
-		for (y=ymin; y<=ymax; y++)
+		for (y=py-range; y <= py+range; y++)
 		{
-			for (x=xmin; x<=xmax; x++)
+			for ( x=px-(range-(abs(py-y))); x <= px+(range-(abs(py-y))); x += MAX(1,2*(range-(abs(py-y)))))
 			{
 				// if it's not on the map
-				if ((x < 0 || y < 0 || x >= DUNGEON_SIZE || y >= DUNGEON_SIZE) || 
-						// or not on the edge of the current display horizon
-						(x != xmin && x != xmax && y != ymin && y != ymax))
+				if (x < 0 || y < 0 || x >= DUNGEON_SIZE || y >= DUNGEON_SIZE)
 				{
 					// then get next cell
 					continue;
@@ -306,15 +266,54 @@ void draw_maze (void)
 						// if any of the corners are in front of the camera then attempt to draw the wall (still could be off screen)
 						if (in_front)
 						{
-							fill(&wall2d,3);
+							fill(&wall2d,10);
+						}
+						if (dungeon[y][x].objects)
+						{
+							Object* pObj = dungeon[y][x].objects;
+							while (pObj)
+							{
+								int dist = distance(dungeon[y][x].objects->pos,player.pos);
+								int ibmp = dist/50;
+								if (ibmp < 5)
+								{
+									int width = pObj->bitmap[ibmp][18];
+									PointXY spos;
+									bool visible;
+									visible = my3Dto2D(&spos, &pObj->pos);
+									if (visible)
+									{
+										spos.x = spos.x-width/2;
+										myNokia5110_PrintBMP(spos.x, spos.y, pObj->bitmap[ibmp], 9);
+									}
+								}
+								pObj = dungeon[y][x].objects->next;
+							}
 						}
 					}
 				}
-//				draw_object();
 			}
 		}
-		xmin++; xmax--; ymin++; ymax--;
 	}
+}
+
+int isqrt(int n)
+{
+  int b = 0;
+  while(n >= 0)
+  {
+    n = n - b;
+    b = b + 1;
+    n = n - b;
+  }
+  return b - 1;
+}
+
+int distance (PointXYZ a, PointXYZ b)
+{
+	int dx = MAX(a.z,b.z) - MIN(a.z,b.z);
+	int dy = MAX(a.x,b.x) - MIN(a.x,b.x);
+	return isqrt(dx*dx+dy*dy);
 }
 
 /* Main program */
@@ -351,34 +350,6 @@ int main(void)
 }
 /* Initialisation of constant global sprite values */
 void init_sprites(void){
-	int n=0; // sprite_list index
-	// Shield
-	shield.bitmap[0] = shield1BMP; // far
-	shield.bitmap[1] = shield2BMP; // mid
-	shield.bitmap[2] = shield3BMP; // near
-	shield.bitmap[3] = shield4BMP; // equipped
-	shield.exists = TRUE;
-	sprite_list[n++] = &shield;
-	// Sword
-	sword.bitmap[0] = sword1BMP; // far
-	sword.bitmap[1] = sword2BMP; // mid
-	sword.bitmap[2] = sword3BMP; // near
-	sword.bitmap[3] = sword4BMP; // equipped
-	sword.exists = TRUE;
-	// Goblin
-	goblin.bitmap[0] = goblin1BMP; // far
-	goblin.bitmap[1] = goblin2BMP; // mid
-	goblin.bitmap[2] = goblin3BMP; // near
-	goblin.bitmap[3] = goblin4BMP; // dead
-	goblin.exists = TRUE;
-	sprite_list[n++] = &goblin;
-	// Troll
-	troll.bitmap[0] = troll1BMP; // far
-	troll.bitmap[1] = troll2BMP; // mid
-	troll.bitmap[2] = troll3BMP; // near
-	troll.bitmap[3] = troll4BMP; // dead
-	troll.exists = TRUE;
-	sprite_list[n++] = &troll;
 }
 
 /* Turn off a sprite */
@@ -388,7 +359,7 @@ void destroy(Sprite *s){
 }
 
 
-/* Draw all active sprites */
+/* Draw all active sprites 
 void draw_board(void){
 	int i;
 	Nokia5110_ClearBuffer();
@@ -399,7 +370,7 @@ void draw_board(void){
 													sprite_list[i]->bitmap[sprite_list[i]->bitmapn],
 													0);
   Nokia5110_DisplayBuffer();     // draw buffer
-}
+}*/
 /* Hardware, Game and Sprite Initialisation */
 void init (void){
   TExaS_Init(SSI0_Real_Nokia5110_Scope);  // set system clock to 80 MHz
@@ -708,7 +679,7 @@ void fill (const WallXY *wall, int shading)
 	int xmin = wall->corner[TOP_LEFT_CORNER].x+1;
 	int xmax = wall->corner[TOP_RIGHT_CORNER].x-1;
 	int x,y,ymin,ymax;
-
+	
 	// fill the wall pixels
 	for (x=xmin; x<=xmax; x++)
 	{
