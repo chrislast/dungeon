@@ -1,4 +1,4 @@
-#!/bin/bash -eux
+#!/bin/bash -eu
 #
 # for filename in *.bmp; 
 #	do printf "\nconst unsigned char ${filename/.bmp}[] = { %s0xFF};\n" 
@@ -19,14 +19,14 @@ size=${#bmp[@]}
 if [ "${bmp[0]}" != "66" -o "${bmp[1]}" != "77" ]; then 
 	echo $1 is not a bitmap file ${bmp[0]}${bmp[1]} && exit; 
 fi
-bitmap_data_start=$((${bmp[10]}+${bmp[11]}*256+${bmp[12]}*256*256+${bmp[13]}*256*256*256))
+bitmap_data_start=$((bmp[10]+(bmp[11]+(bmp[12]+(bmp[13]<<4)<<4)<<4)))
 width=${bmp[18]}
 height=${bmp[22]}
-echo size=$size width=$width height=$height data@$bitmap_data_start bmp=${bmp[@]}
-
+#echo size=$size width=$width height=$height data@$bitmap_data_start # bmp=${bmp[@]}
+#echo
 ypos=height
 xpos=0
-screenw=$(((width-1)/4+1))
+screenw=$width
 screeny=$((ypos/8))
 screenx=$((xpos+screenw*screeny))
 threshold=9
@@ -35,20 +35,21 @@ mask=$((0x01 << $mask))
 j=${bmp[10]}                  # byte 10 contains the offset where image data can be found
 skip=(0 3 2 1)
 declare -a Screen
- 
+
+# Draw the (upside down) bitmap picture from bitmap data
+#tail --bytes=+$bitmap_data_start $1 | od -An -tx1 -v -w$(((width+7)>>3<<2)) | sed 's/ //g;s/0/ /g'
+
 loopc=$((width*height/2))
-for i in $(seq 0 $loopc); do
-	Screen[$((screenx+0))]=$((${Screen[$((screenx+0))]:-0}))
-	Screen[$((screenx+1))]=$((${Screen[$((screenx+1))]:-0}))
-	Screen[$((screenx+2))]=$((${Screen[$((screenx+2))]:-0}))
-	Screen[$((screenx+3))]=$((${Screen[$((screenx+3))]:-0}))
+for i in $(seq 1 $loopc); do
 	# the left pixel is in the upper 4 bits
+	Screen[$((screenx))]=${Screen[screenx]:-0}
+	# echo $i $j ${bmp[j]}
 	if [ $(((bmp[j]>>4)&0xF)) -gt $threshold ]; then
 		Screen[$((screenx))]=$((Screen[screenx]|mask))
 	fi
 	screenx=$((screenx + 1))
-	Screen[$screenx]=$((${Screen[$screenx]:-0}))
 	# the right pixel is in the lower 4 bits
+	Screen[$((screenx))]=${Screen[screenx]:-0}
 	if [ $((bmp[j]&0xF)) -gt $threshold ]; then
 		Screen[$((screenx))]=$((Screen[screenx]|mask))
 	fi
@@ -61,16 +62,24 @@ for i in $(seq 0 $loopc); do
 			mask=$((0x80))
 			screeny=$((screeny - 1))
 		fi
+		# bitmaps are 32-bit word aligned
+		j=$((j + skip[$(((width/2)%4))]))
+		screenx=$((width*screeny))
     fi
-    screenx=$((width*screeny))
-    # bitmaps are 32-bit word aligned
-	j=$((j + skip[$(((width/2)%4))]))
 done
 
 size2=${#Screen[@]}
 # Show screen elements for debug
-for i in $(seq 0 $((size2-1))); do printf "Element [%d]: %d\n" $i ${Screen[$i]}; done
+#echo
+#for i in $(seq 0 $((size2-1))); do printf "Element [%d]: %d\n" $i ${Screen[$i]}; done
 
+#echo ============ ${#Screen[@]} ===========
+#echo $width $height ${Screen[@]}
 
-echo ============ ${#Screen[@]} ===========
-echo ${Screen[@]}
+fname=${1##*/}
+fname=${fname%%.*}
+printf 'const unsigned char %s[]={%d,%d' $fname $width $height
+for t in $(eval echo ${Screen[@]}); do
+	printf ',0x%02x' $t
+done
+printf '};\n'
