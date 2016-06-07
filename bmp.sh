@@ -37,7 +37,9 @@ skip=(0 3 2 1)
 declare -a Screen
 
 # Draw the (upside down) bitmap picture from bitmap data
-#tail --bytes=+$bitmap_data_start $1 | od -An -tx1 -v -w$(((width+7)>>3<<2)) | sed 's/ //g;s/0/ /g'
+echo processing $1 >&2
+tail --bytes=+$bitmap_data_start $1 | od -An -tx1 -v -w$(((width+7)>>3<<2)) | sed 's/ //g;s/0/ /g' >&2
+echo >&2
 
 loopc=$((width*height/2))
 for i in $(seq 1 $loopc); do

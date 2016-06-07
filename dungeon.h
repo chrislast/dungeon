@@ -21,10 +21,17 @@ typedef struct PointXY
 
 typedef struct Object
 {
-	const unsigned char* bitmap[5];
+	const unsigned char* bitmap;
 	PointXYZ pos;
+	bool exists;
 	struct Object* next;
 } Object;
+
+typedef struct LLObjectNode
+{
+	Object *object;
+	struct LLObjectNode *next;
+} LLObjectNode;
 
 typedef enum wall_e
 {

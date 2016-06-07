@@ -37,7 +37,7 @@
 #define WALL_LENGTH 100
 #define WALL_HEIGHT 45
 #define MAX_VIEW_RANGE 10
-#define DUNGEON_SIZE 6
+#define DUNGEON_SIZE 8
 
 #define ASPECT_RATIO_ZOOM 40
 
@@ -64,6 +64,11 @@
 // Global game parameters
 int score;
 int health;
+bool shield_equipped = false;
+bool sword_equipped = false;
+bool armour_equipped = false;
+bool in_combat = false;
+
 typedef struct Player
 {
 	PointXYZ pos;
@@ -73,20 +78,34 @@ typedef struct Player
 Room dungeon[DUNGEON_SIZE][DUNGEON_SIZE];
 
 #if (DUNGEON_SIZE == 3)
-	Player player = {{150,WALL_HEIGHT*6/11, 50},90};
+	Player player = {{150,24,050},90};
 	const int room_data[DUNGEON_SIZE][DUNGEON_SIZE] = { 
 						{ NW ,NS ,NE },
 						{ W  ,N  ,E  },
 						{ SW ,S  ,SE }};
+	Object sword= {swordBMP, {180,34,020},true,NULL};
+	Object armour={armourBMP,{280,34,020},true,NULL};
+	Object shield={shieldBMP,{180,32,120},true,NULL};
+	Object goblin1={goblinBMP,{050,32,150},true,NULL};
+	Object goblin2={goblinBMP,{050,32,150},true,NULL};
+	Object potion={potionBMP,{250,36,250},true,NULL};
+	Object troll= {trollBMP, {050,28,050},true,NULL};
 #elif (DUNGEON_SIZE == 4)
-	Player player = {{150,WALL_HEIGHT*6/11, 250},270};
+	Player player = {{150,24,250},270};
 	const int room_data[DUNGEON_SIZE][DUNGEON_SIZE] = { 
 						{ NW ,NS ,NS ,NE },
 						{ EW ,NW ,NES,EW },
 						{ W  ,SE ,NW ,SE },
 						{ SEW,NW ,S  ,NES}};
+	Object sword= {swordBMP, {180,34,020},true,NULL};
+	Object armour={armourBMP,{280,34,020},true,NULL};
+	Object shield={shieldBMP,{180,32,120},true,NULL};
+	Object goblin1={goblinBMP,{050,32,150},true,NULL};
+	Object goblin2={goblinBMP,{050,32,150},true,NULL};
+	Object potion={potionBMP,{250,36,250},true,NULL};
+	Object troll= {trollBMP, {050,28,050},true,NULL};
 #elif (DUNGEON_SIZE == 6)
-	Player player = {{550,WALL_HEIGHT*6/11, 550},315};
+	Player player = {{550,24,550},315};
 	const int room_data[DUNGEON_SIZE][DUNGEON_SIZE] = { 
 						{ NW ,N  ,NS ,N  ,N  ,NE },
 						{ W  ,S  ,NE ,W  ,0  ,E  },
@@ -94,8 +113,35 @@ Room dungeon[DUNGEON_SIZE][DUNGEON_SIZE];
 						{ W  ,NE ,SEW,SW ,0  ,E  },
 						{ W  ,0  ,NS ,NS ,0  ,E  },
 						{ SW ,S  ,NS ,NS ,S  ,SE }};
-	Object troll={{troll_large2,troll_med0,troll_small0,troll_tiny0,troll_tiny0},{50,WALL_HEIGHT,50},NULL};
+	Object sword= {swordBMP, {180,34,020},true,NULL};
+	Object armour={armourBMP,{280,34,020},true,NULL};
+	Object shield={shieldBMP,{180,32,120},true,NULL};
+	Object goblin1={goblinBMP,{050,32,150},true,NULL};
+	Object goblin2={goblinBMP,{050,32,150},true,NULL};
+	Object potion={potionBMP,{250,36,250},true,NULL};
+	Object troll= {trollBMP, {050,28,050},true,NULL};
+#elif (DUNGEON_SIZE == 8)
+	Player player = {{750,24,350},315};
+	const int room_data[DUNGEON_SIZE][DUNGEON_SIZE] = { 
+						{ NEW,NSW,N  ,NS ,NS ,N  ,NS ,NE },
+						{ W  ,NES,EW ,NW ,NES,EW ,NW ,SE },
+						{ EW ,NW ,E  ,W  ,N  ,SE ,SW ,NE },
+						{ W  ,E  ,SW ,SE ,EW ,NW ,NS ,SE },
+						{ EW ,SW ,N  ,NS ,E  ,W  ,NS ,NS },
+						{ EW ,NSW,S  ,NE ,EW ,SW ,NS ,NE },
+						{ W  ,N  ,NS ,S  ,0  ,NS ,NES,EW },
+						{ SEW,SW ,NS ,NES,SEW,NSW,NS ,SE }};
+	Object sword=  {swordBMP, {150,34,180},true,NULL};
+	Object armour= {armourBMP,{780,34,450},true,NULL};
+	Object shield= {shieldBMP,{750,32,520},true,NULL};
+	Object goblin1={goblinBMP,{450,32,250},true,NULL};
+	Object goblin2={goblinBMP,{250,32,450},true,NULL};
+	Object potion= {potionBMP,{750,36,050},true,NULL};
+	Object troll=  {trollBMP, {450,28,750},true,NULL};
 #endif
+	Object *objects[]={&sword,&armour,&shield,&goblin1,&goblin2,&potion,&troll};
+	
+	const unsigned char *compass[8]={compassNBMP,compassNEBMP,compassEBMP,compassSEBMP,compassSBMP,compassSWBMP,compassWBMP,compassNWBMP};
 
 // Game functions
 void init_sprites(void);
@@ -130,7 +176,8 @@ void fill (const WallXY *wall, int shading);
 bool my3Dto2D (PointXY *screen_pos, const PointXYZ *point);
 void draw_pixel(PointXY *p, colour_e colour);
 int isqrt(int n);
-int distance (PointXYZ a, PointXYZ b);
+int distance (PointXYZ a, PointXYZ b);	
+void show_map(void);
 
 void init_game()
 {
@@ -196,28 +243,52 @@ void init_game()
 		}
 	}
 	// add objects to rooms
-		dungeon[0][0].objects=&troll;
-	// Draw the map on screen briefly
+	for (i=0; i < (sizeof(objects)/sizeof(Object *)); i++)
+	{
+		int x = objects[i]->pos.z/WALL_LENGTH;
+		int y = objects[i]->pos.x/WALL_LENGTH;
+		dungeon[y][x].objects = objects[i];
+		// if height is not defined use half bitmap height
+		if (!dungeon[y][x].objects->pos.y)
+			dungeon[y][x].objects->pos.y = WALL_HEIGHT - dungeon[y][x].objects->bitmap[22]/2;
+	}
+	// Preview the map on screen briefly
+	show_map();
+	Delay1ms(5000);
+}
+
+void show_map(void)
+{
+	int i,j,px=20,py=20;
+
+	Nokia5110_ClearBuffer();
 	for (i=0; i<DUNGEON_SIZE; i++)
 	{
 		for (j=0; j<DUNGEON_SIZE; j++)
 		{
-			const int SCALE=8;
+			const int SCALE=(SCREENH/DUNGEON_SIZE);
 			PointXY p1,p2,p3,p4;
 			p1.x = p4.x = j * SCALE;
 			p2.x = p3.x = j * SCALE + SCALE;
 			p1.y = p2.y = i * SCALE;
-			p3.y = p4.y = i * SCALE + SCALE;
+			p3.y = p4.y = i * SCALE + SCALE; 
 			if (room_data[i][j] & NORTH) draw_line(&p1,&p2);
 			if (room_data[i][j] & EAST)  draw_line(&p2,&p3);
 			if (room_data[i][j] & SOUTH) draw_line(&p3,&p4);
 			if (room_data[i][j] & WEST)  draw_line(&p4,&p1);
+			if (dungeon[i][j].objects && dungeon[i][j].objects->exists)
+				myNokia5110_PrintResizedBMP (p4.x, p4.y, SCALE, 0x09, dungeon[i][j].objects->bitmap);
+			if ((player.pos.x/100) == i && (player.pos.z/100) == j)
+			{
+				// save the player position x,y coordinates
+				px = p4.x; py = p4.y;
+			}
 		}
 	}
+	// show player position
+	myNokia5110_PrintBMP (px, py, playerBMP, 0x09);
 	Nokia5110_DisplayBuffer();
-	Delay1ms(1000);
 }
-
 /*************************** CODE *****************************/
 
 void draw_maze (void)
@@ -266,27 +337,40 @@ void draw_maze (void)
 						// if any of the corners are in front of the camera then attempt to draw the wall (still could be off screen)
 						if (in_front)
 						{
+							PointXY tpos2d;
+							PointXYZ *ptpos3d = dungeon[y][x].wall[wall].corners;
+							PointXYZ tpos3d;
+							int dist;
+							// Draw the wall
 							fill(&wall2d,10);
+							// and add a torch to the centre of the wall
+							tpos3d.x = (ptpos3d[0].x + ptpos3d[1].x + ptpos3d[2].x + ptpos3d[3].x) / 4;
+							tpos3d.y = (ptpos3d[0].y + ptpos3d[1].y + ptpos3d[2].y + ptpos3d[3].y) / 4;
+							tpos3d.z = (ptpos3d[0].z + ptpos3d[1].z + ptpos3d[2].z + ptpos3d[3].z) / 4;
+							my3Dto2D (&tpos2d, &tpos3d);
+							dist = distance(player.pos,tpos3d);
+							myNokia5110_PrintResizedBMP(
+								tpos2d.x, tpos2d.y, 										// screen x,y
+								ASPECT_RATIO_ZOOM * torch0BMP[18] / dist,	// resized width
+								9, torch0BMP);
 						}
-						if (dungeon[y][x].objects)
+						if (dungeon[y][x].objects && dungeon[y][x].objects->exists)
 						{
 							Object* pObj = dungeon[y][x].objects;
 							while (pObj)
 							{
-								int dist = distance(dungeon[y][x].objects->pos,player.pos);
-								int ibmp = dist/50;
-								if (ibmp < 5)
+								PointXY spos;
+								bool visible;
+
+								int dist = distance(pObj->pos,player.pos);
+								int width = ASPECT_RATIO_ZOOM * pObj->bitmap[18] / dist;
+								int height = ASPECT_RATIO_ZOOM * pObj->bitmap[22] / dist;
+								visible = my3Dto2D (&spos, &pObj->pos);
+								if ( visible && width > 0 && height > 0 )
 								{
-									int width = pObj->bitmap[ibmp][18];
-									PointXY spos;
-									bool visible;
-									visible = my3Dto2D(&spos, &pObj->pos);
-									if (visible)
-									{
-										spos.x = spos.x-width/2;
-										myNokia5110_PrintBMP(spos.x, spos.y, pObj->bitmap[ibmp], 9);
-									}
+									myNokia5110_PrintResizedBMP (spos.x-width/2, spos.y+height/2, width, 0x09, pObj->bitmap);
 								}
+								// Get next Object
 								pObj = dungeon[y][x].objects->next;
 							}
 						}
@@ -316,6 +400,26 @@ int distance (PointXYZ a, PointXYZ b)
 	return isqrt(dx*dx+dy*dy);
 }
 
+void draw_fixed_objects(void)
+{
+	// equipped items
+	if (shield_equipped) myNokia5110_PrintBMP(0,SCREENH-1,equippedshieldBMP,9);
+	if (sword_equipped) myNokia5110_PrintBMP(SCREENW-1-equippedswordBMP[18],SCREENH-1,equippedswordBMP,9);
+	if (armour_equipped) myNokia5110_PrintBMP(SCREENW/2-equippedarmourBMP[18]/2,SCREENH-1,equippedarmourBMP,9);
+	// show compass
+	myNokia5110_PrintBMP(0,9,compass[((player.rotation+112)%360)/45],9);
+	// show health
+	
+}	
+
+void show_message (char *message, const int delayms)
+{
+		Nokia5110_Clear();
+		Nokia5110_SetCursor(0,0);
+		Nokia5110_OutString(message);
+		Delay1ms(delayms);
+}
+
 /* Main program */
 int main(void)
 {
@@ -327,24 +431,97 @@ int main(void)
 	{
 		Nokia5110_ClearBuffer();
 		draw_maze();
+		draw_fixed_objects();
 		Delay1ms(20);
 		Nokia5110_DisplayBuffer();
 		player.rotation = (player.rotation + ADCdata + 360) % 360;
 		if (GPIO_PORTE_DATA_R & BIT(0))
 		{
+			Object *pObj;
+			int oldx=player.pos.x;
+			int oldz=player.pos.z;
 			int x,y;
 			player.pos.x += ((sine(player.rotation)>>13)+1)>>1;
 			y = player.pos.x / WALL_LENGTH;
+			player.pos.z += ((cosine(player.rotation)>>13)+1)>>1;
+			x = player.pos.z / WALL_LENGTH;
 			if (dungeon[y][x].wall[SOUTH_WALL].exists && (player.pos.x % WALL_LENGTH > WALL_LENGTH * 9 / 10))
 				player.pos.x = y * WALL_LENGTH + WALL_LENGTH * 9 / 10;
 			else if (dungeon[y][x].wall[NORTH_WALL].exists && (player.pos.x % WALL_LENGTH < WALL_LENGTH * 1 / 10))
 				player.pos.x = y * WALL_LENGTH + WALL_LENGTH * 1 / 10;
-			player.pos.z += ((cosine(player.rotation)>>13)+1)>>1;
-			x = player.pos.z / WALL_LENGTH;
 			if (dungeon[y][x].wall[EAST_WALL].exists && (player.pos.z % WALL_LENGTH > WALL_LENGTH * 9 / 10))
 				player.pos.z = x * WALL_LENGTH + WALL_LENGTH * 9 / 10;
 			else if (dungeon[y][x].wall[WEST_WALL].exists && (player.pos.z % WALL_LENGTH < WALL_LENGTH * 1 / 10))
 				player.pos.z = x * WALL_LENGTH + WALL_LENGTH * 1 / 10;
+			pObj = dungeon[y][x].objects;
+			while (pObj)
+			{
+				if (pObj->exists && distance(player.pos,pObj->pos) < MAX(pObj->bitmap[22],pObj->bitmap[18])/2)
+				{
+					if (pObj == &armour)
+					{
+						armour_equipped = true;
+						armour.exists = false;
+						show_message (
+							"            "
+							"You've found"
+							"the armor it"
+							"will reduce "
+							"damage taken",
+							2000);
+					}
+					else if (pObj == &sword)
+					{
+						sword_equipped = true;
+						sword.exists = false;
+						show_message (
+							"You've found"
+							" the sword  "
+							"Keep enemies"
+							"on the right"
+							"to do damage"
+							"  with it",
+							3000);
+					}
+					else if (pObj == &shield)
+					{
+						shield_equipped = true;
+						shield.exists = false;
+						show_message (
+							"You've found"
+							" the shield "
+							"Keep enemies"
+							" on left to "
+							" block more "
+							"   damage",
+							3000);
+					}
+					else if (pObj == &potion && health < 100)
+					{
+						health = 100;
+						potion.exists = false;
+						show_message (
+							"            "
+							" The health "
+							"   potion   "
+							"  restores  "
+							"    you",
+							2000);
+					}
+					else // implement no-go zone for monsters!
+					{
+						player.pos.x = oldx;
+						player.pos.z = oldz;
+						in_combat = true;
+					}
+				}
+				pObj = pObj->next;
+			}
+		}
+		if (GPIO_PORTE_DATA_R & BIT(1))
+		{
+			show_map();
+			while (!GPIO_PORTE_DATA_R & BIT(1));
 		}
 	}
 }

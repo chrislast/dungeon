@@ -305,6 +305,7 @@ void Nokia5110_DrawFullImage(const char *ptr){
     lcdwrite(DATA, ptr[i]);
   }
 }
+
 char Screen[SCREENW*SCREENH/8]; // buffer stores the next image to be printed on the screen
 
 //********Nokia5110_PrintBMP*****************
@@ -387,6 +388,8 @@ void Nokia5110_PrintBMP(unsigned char xpos, unsigned char ypos, const unsigned c
 
 /* Output a bitmap to the screen buffer */
 void myNokia5110_PrintBMP(int xpos, int ypos, const unsigned char *ptr, unsigned char threshold){
+	myNokia5110_PrintResizedBMP(xpos, ypos, ptr[18], threshold, ptr);
+/*
   long width = ptr[18], height = ptr[22], i, j;
   int screenx, screeny;
   unsigned char mask;
@@ -444,7 +447,69 @@ void myNokia5110_PrintBMP(int xpos, int ypos, const unsigned char *ptr, unsigned
         case 3: j = j + 1; break;
       }
     }
-  }
+  }*/
+}
+
+void myNokia5110_PrintResizedBMP(int xpos, int ypos, int target_width,  unsigned char threshold, const unsigned char *source_bitmap)
+{
+	int target_height;
+	// before starting check that something will actually be displayed
+	if ((target_width > 0) &&					// check width is large enough to be seen
+			(xpos < SCREENW) &&						// check entire image is not right of view
+			(ypos >= 0) && 								// check entire image is not left of view
+			(xpos+target_width>=0) &&			// check part of image is in view horizontally
+			(ypos-target_height<SCREENH)) // check part of image is in view vertically
+	{
+		const unsigned char *pSRC;
+		int xscale8 = (source_bitmap[18] << 8) / target_width;
+		int iTGT,jTGT,iSRC,jSRC,bytesSRCline,screenx,screeny;
+		unsigned char bmp_data;
+		target_height = (source_bitmap[22]<<8)/xscale8;
+		if (target_height < 2) return; // check height is large enough to be seen
+		
+		// round target width to nearest even number
+		target_width = (target_width + 1) & ~1;
+		
+		// calculate the number of bytes in original bitmap data used for each row of pixels
+		pSRC = &source_bitmap[source_bitmap[10]];
+		bytesSRCline = ((source_bitmap[18]+1)/2 + 3) & ~3;
+		
+		
+		for (iTGT=0; iTGT<target_height; iTGT++)
+		{
+			screeny = ypos-iTGT;
+			if (screeny < 0) break; // skip rest of image as it is above screen
+			if (screeny >= SCREENH) // if start point is below visible area
+			{
+				screeny = SCREENH-1;  // skip to first visible row of pixels
+				iTGT = ypos-SCREENH+1;
+			}
+			// get row part of address index of bitmap source data for current row
+			iSRC = ((iTGT*xscale8)>>8) * bytesSRCline;
+			for (jTGT=0; jTGT<target_width; jTGT++)
+			{
+				screenx = jTGT+xpos;
+				if (screenx >= SCREENW) continue; // if rest of pixels are out of view skip rest of pixel row
+				if (screenx < 0)                  // if not yet at visible pixel then skip to first visible pixel
+				{
+					screenx = 0;
+					jTGT = -xpos;
+				}
+				// get nibble offset to source bitmap data within row
+				jSRC = iSRC*2 + (jTGT*xscale8>>8);
+				if (jSRC%2) 	// if nibble offset is odd number
+					bmp_data = pSRC[jSRC/2] & 0xF;  // use least significant nibble
+				else
+					bmp_data = pSRC[jSRC/2] >> 4;   // use most significant nibble
+				if (bmp_data == threshold)  // if bitmap data is on threshold
+					// force white pixel
+					Screen[(screeny/8*SCREENW)+screenx] &= ~(0x01<<screeny%8);
+				else if (bmp_data > threshold) // if it is above threshold
+					 // force black pixel
+					Screen[(screeny/8*SCREENW)+screenx] |= (0x01<<screeny%8);
+			}
+		}
+	}
 }
 
 // There is a buffer in RAM that holds one screen
