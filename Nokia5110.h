@@ -258,8 +258,11 @@ void Nokia5110_DrawFullImage(const char *ptr);
 //                     0 is fine for ships, explosions, projectiles, and bunkers
 // outputs: none
 void Nokia5110_PrintBMP(unsigned char xpos, unsigned char ypos, const unsigned char *ptr, unsigned char threshold);
-void myNokia5110_PrintBMP(int xpos, int ypos, const unsigned char *ptr, unsigned char threshold);
-void myNokia5110_PrintResizedBMP(int xpos, int ypos, int target_width, unsigned char threshold, const unsigned char *source_bitmap);
+void myNokia5110_PrintBMP(int xpos, int ypos, const unsigned char *ptr);
+#ifndef THRESHOLD
+#define THRESHOLD 9
+#endif
+void myNokia5110_PrintResizedBMP(int xpos, int ypos, int target_width, const unsigned char *source_bitmap);
 
 // There is a buffer in RAM that holds one screen
 // This routine clears this buffer

@@ -331,7 +331,7 @@ char Screen[SCREENW*SCREENH/8]; // buffer stores the next image to be printed on
 //                     0 is fine for ships, explosions, projectiles, and bunkers
 // outputs: none
 void Nokia5110_PrintBMP(unsigned char xpos, unsigned char ypos, const unsigned char *ptr, unsigned char threshold){
-  long width = ptr[18], height = ptr[22], i, j;
+/*  long width = ptr[18], height = ptr[22], i, j;
   unsigned short screenx, screeny;
   unsigned char mask;
   // check for clipping
@@ -383,89 +383,29 @@ void Nokia5110_PrintBMP(unsigned char xpos, unsigned char ypos, const unsigned c
         case 3: j = j + 1; break;
       }
     }
-  }
-}
-
-/* Output a bitmap to the screen buffer */
-void myNokia5110_PrintBMP(int xpos, int ypos, const unsigned char *ptr, unsigned char threshold){
-	myNokia5110_PrintResizedBMP(xpos, ypos, ptr[18], threshold, ptr);
-/*
-  long width = ptr[18], height = ptr[22], i, j;
-  int screenx, screeny;
-  unsigned char mask;
-  // check for clipping
-  if((height <= 0) ||              // bitmap is unexpectedly encoded in top-to-bottom pixel order
-     ((width%2) != 0) ||           // must be even number of columns
-     ((xpos + width) > SCREENW) || // right side cut off
-     (ypos < (height - 1)) ||      // top cut off
-     (ypos > SCREENH))           { // bottom cut off
-		;
-  }
-  if(threshold > 14){
-    threshold = 14;             // only full 'on' turns pixel on
-  }
-  // bitmaps are encoded backwards, so start at the bottom left corner of the image
-  screeny = ypos/8;
-  screenx = xpos + SCREENW*screeny;
-  mask = ypos%8;                // row 0 to 7
-  mask = 0x01<<mask;            // now stores a mask 0x01 to 0x80
-  j = ptr[10];                  // byte 10 contains the offset where image data can be found
-  for(i=1; i<=(width*height/2); i=i+1){
-		if (screenx < 0 || screenx >= SCREENW*SCREENH/8)
-		{
-			screenx += 2;
-		}
-		else
-		{
-			// the left pixel is in the upper 4 bits
-			if(((ptr[j]>>4)&0xF) == threshold)
-				Screen[screenx] &= ~(mask);			
-			else if(((ptr[j]>>4)&0xF) > threshold)
-				Screen[screenx] |= mask;
-			screenx = screenx + 1;
-			// the right pixel is in the lower 4 bits
-			if((ptr[j]&0xF) == threshold)
-				Screen[screenx] &= ~(mask);
-			if((ptr[j]&0xF) > threshold)
-				Screen[screenx] |= mask;
-			screenx = screenx + 1;
-		}
-    j = j + 1;
-    if((i%(width/2)) == 0){     // at the end of a row
-      if(mask > 0x01){
-        mask = mask>>1;
-      } else{
-        mask = 0x80;
-        screeny = screeny - 1;
-      }
-      screenx = xpos + SCREENW*screeny;
-      // bitmaps are 32-bit word aligned
-      switch((width/2)%4){      // skip any padding
-        case 0: j = j + 0; break;
-        case 1: j = j + 3; break;
-        case 2: j = j + 2; break;
-        case 3: j = j + 1; break;
-      }
-    }
   }*/
 }
 
-void myNokia5110_PrintResizedBMP(int xpos, int ypos, int target_width,  unsigned char threshold, const unsigned char *source_bitmap)
+/* Output a bitmap to the screen buffer */
+void myNokia5110_PrintBMP(int xpos, int ypos, const unsigned char *ptr){
+	myNokia5110_PrintResizedBMP(xpos, ypos, ptr[18], ptr);
+}
+
+void myNokia5110_PrintResizedBMP(int xpos, int ypos, int target_width, const unsigned char *source_bitmap)
 {
-	int target_height;
+	int xscale8 = (source_bitmap[18] << 8) / target_width;
+	int target_height = (source_bitmap[22]<<8) / xscale8;
 	// before starting check that something will actually be displayed
-	if ((target_width > 0) &&					// check width is large enough to be seen
+	if ((target_width > 1) &&					// check width is large enough to be seen
+			(target_height > 1) &&			  // check height is large enough to be seen
 			(xpos < SCREENW) &&						// check entire image is not right of view
-			(ypos >= 0) && 								// check entire image is not left of view
+			(ypos >= 0) && 								// check entire image is not above view
 			(xpos+target_width>=0) &&			// check part of image is in view horizontally
 			(ypos-target_height<SCREENH)) // check part of image is in view vertically
 	{
 		const unsigned char *pSRC;
-		int xscale8 = (source_bitmap[18] << 8) / target_width;
 		int iTGT,jTGT,iSRC,jSRC,bytesSRCline,screenx,screeny;
 		unsigned char bmp_data;
-		target_height = (source_bitmap[22]<<8)/xscale8;
-		if (target_height < 2) return; // check height is large enough to be seen
 		
 		// round target width to nearest even number
 		target_width = (target_width + 1) & ~1;
@@ -501,10 +441,10 @@ void myNokia5110_PrintResizedBMP(int xpos, int ypos, int target_width,  unsigned
 					bmp_data = pSRC[jSRC/2] & 0xF;  // use least significant nibble
 				else
 					bmp_data = pSRC[jSRC/2] >> 4;   // use most significant nibble
-				if (bmp_data == threshold)  // if bitmap data is on threshold
+				if (bmp_data == THRESHOLD)  // if bitmap data is on threshold
 					// force white pixel
 					Screen[(screeny/8*SCREENW)+screenx] &= ~(0x01<<screeny%8);
-				else if (bmp_data > threshold) // if it is above threshold
+				else if (bmp_data > THRESHOLD) // if it is above threshold
 					 // force black pixel
 					Screen[(screeny/8*SCREENW)+screenx] |= (0x01<<screeny%8);
 			}

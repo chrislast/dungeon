@@ -1,3 +1,6 @@
+#ifndef _GLOBAL_H_
+#define _GLOBAL_H_
+
 /*************** GENERAL PURPOSE DEFINES ************/
 #define CLOCK_SPEED 80000000L
 #define TRUE  (1)
@@ -11,16 +14,50 @@
 #define BIT(X) (1L<<(X)) // single bit set
 #define PCTL(X) (7L<<(X*3)) // three bits set
 
-// Sprites
-typedef struct Sprite{
-	int mapx;
-	int mapy;
-	int screenx;
-	int screeny;
-	int exists;
-	int bitmapn;
-	const unsigned char* bitmap[4];
-} Sprite;
+/* GAME SPECIFIC DEFINES */
+
+#define DUNGEON_SIZE 8
+
+#define WALL_LENGTH 100
+#define WALL_HEIGHT 45
+#define MAX_VIEW_RANGE 10
+
+#define ASPECT_RATIO_ZOOM 50
+
+#define TOP_LEFT_CORNER (0)
+#define FIRST_CORNER (TOP_LEFT_CORNER)
+#define TOP_RIGHT_CORNER (1)
+#define BOTTOM_RIGHT_CORNER (2)
+#define BOTTOM_LEFT_CORNER (3)
+#define LAST_CORNER (BOTTOM_LEFT_CORNER)
+
+#define NORTH_WALL (0)
+#define FIRST_WALL (NORTH_WALL)
+#define EAST_WALL (1)
+#define SOUTH_WALL (2)
+#define WEST_WALL (3)
+#define LAST_WALL (WEST_WALL)
+
+#define TROLL_ATK_DIE 2
+#define TROLL_ATK_SIDES 12
+#define TROLL_ATK_SPEED 36
+#define TROLL_HEALTH 200
+#define GOBLIN_ATK_DIE 1
+#define GOBLIN_ATK_SIDES 4
+#define GOBLIN_ATK_SPEED 20
+#define GOBLIN_HEALTH 60
+#define FIST_ATK_SPEED 10
+#define FIST_ATK_DIE 1
+#define FIST_ATK_SIDES 3
+#define SWORD_ATK_SPEED 16
+#define SWORD_ATK_DIE 2
+#define SWORD_ATK_SIDES 6
+#define PLAYER_HEALTH 99
+
+#define NOT_IN_COMBAT false
+#define IN_COMBAT true
+#define NOT_EQUIPPED false
+#define EQUIPPED true
 
 // General and intialisation functions
 void DisableInterrupts(void); // Disable interrupts
@@ -63,20 +100,101 @@ void Sound_Tone(enum Sound sound);
 void Sound_Off(int sound);
 void SysTick_Handler(void);
 
-/*********** GRaphics **************/
-const unsigned char* goblin1BMP;
-const unsigned char* goblin2BMP;
-const unsigned char* goblin3BMP;
-const unsigned char* goblin4BMP;
-const unsigned char* troll1BMP;
-const unsigned char* troll2BMP;
-const unsigned char* troll3BMP;
-const unsigned char* troll4BMP;
-const unsigned char* sword1BMP;
-const unsigned char* sword2BMP;
-const unsigned char* sword3BMP;
-const unsigned char* sword4BMP;
-const unsigned char* shield1BMP;
-const unsigned char* shield2BMP;
-const unsigned char* shield3BMP;
-const unsigned char* shield4BMP;
+#include <stdbool.h>
+
+typedef enum colour_e
+{
+	WHITE=0,
+	BLACK=1
+} colour_e;
+
+typedef struct PointXYZ
+{
+	int x;
+	int y;
+	int z;
+} PointXYZ;
+
+typedef struct PointXY
+{
+	int x;
+	int y;
+} PointXY;
+
+typedef enum ObjectTypeE
+{
+	ENEMY,
+	ITEM
+} ObjectTypeE;
+
+typedef struct Object
+{
+	const unsigned char* bitmap;
+	PointXYZ pos;
+	bool exists;
+	ObjectTypeE type;
+	int atk_die_num;
+	int atk_die_sides;
+	int atk_speed;
+	int health;
+	PointXY screenpos; // keep at end no need to initalize this
+} Object;
+
+typedef struct Player
+{
+	PointXYZ pos;
+	int rotation;
+	int health;
+	bool shield_equipped;
+	bool sword_equipped;
+	bool armour_equipped;
+	int atk_die_num;
+	int atk_die_sides;
+	int atk_speed;
+	bool in_combat;
+	int last_attack_value;
+	Object *in_combat_with;
+} Player;
+
+typedef enum wall_e
+{
+	NORTH=1,
+	EAST=2,
+	SOUTH=4,
+	WEST=8,
+	N=NORTH,
+	W=WEST,
+	E=EAST,
+	S=SOUTH,
+	NE=N|E,
+	NW=N|W,
+	NS=N|S,
+	EW=E|W,
+	SE=E|S,
+	SW=S|W,
+	NES=NE|S,
+	NEW=NE|W,
+	SEW=SE|W,
+	NSW=NS|W,
+	NSEW=NS|EW
+} wall_e;
+
+typedef struct WallXYZ
+{
+	PointXYZ corners[4];
+	bool exists;
+} WallXYZ;
+
+typedef struct WallXY
+{
+	PointXY corner[4];
+} WallXY;
+
+
+typedef struct Room
+{
+	Object* objects;
+	WallXYZ wall[4];
+} Room;
+
+#endif

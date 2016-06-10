@@ -33,120 +33,17 @@
 #include "Random.h"
 #include "global.h"
 #include "dungeon.h"
-
-#define WALL_LENGTH 100
-#define WALL_HEIGHT 45
-#define MAX_VIEW_RANGE 10
-#define DUNGEON_SIZE 8
-
-#define ASPECT_RATIO_ZOOM 40
-
-#define TOP_LEFT_CORNER (0)
-#define FIRST_CORNER (TOP_LEFT_CORNER)
-#define TOP_RIGHT_CORNER (1)
-#define BOTTOM_RIGHT_CORNER (2)
-#define BOTTOM_LEFT_CORNER (3)
-#define LAST_CORNER (BOTTOM_LEFT_CORNER)
-
-#define NORTH_WALL (0)
-#define FIRST_WALL (NORTH_WALL)
-#define EAST_WALL (1)
-#define SOUTH_WALL (2)
-#define WEST_WALL (3)
-#define LAST_WALL (WEST_WALL)
+#include "bmp.h"
 
 #define MAX(a,b) ((a)>(b)?(a):(b))
 #define MIN(a,b) ((a)>(b)?(b):(a))
 
-// bitmap files
-#include "bmp.txt"
-
-// Global game parameters
-int score;
-int health;
-bool shield_equipped = false;
-bool sword_equipped = false;
-bool armour_equipped = false;
-bool in_combat = false;
-
-typedef struct Player
-{
-	PointXYZ pos;
-	int rotation;
-} Player;
+// Global parameters
+int tick;
 		
 Room dungeon[DUNGEON_SIZE][DUNGEON_SIZE];
-
-#if (DUNGEON_SIZE == 3)
-	Player player = {{150,24,050},90};
-	const int room_data[DUNGEON_SIZE][DUNGEON_SIZE] = { 
-						{ NW ,NS ,NE },
-						{ W  ,N  ,E  },
-						{ SW ,S  ,SE }};
-	Object sword= {swordBMP, {180,34,020},true,NULL};
-	Object armour={armourBMP,{280,34,020},true,NULL};
-	Object shield={shieldBMP,{180,32,120},true,NULL};
-	Object goblin1={goblinBMP,{050,32,150},true,NULL};
-	Object goblin2={goblinBMP,{050,32,150},true,NULL};
-	Object potion={potionBMP,{250,36,250},true,NULL};
-	Object troll= {trollBMP, {050,28,050},true,NULL};
-#elif (DUNGEON_SIZE == 4)
-	Player player = {{150,24,250},270};
-	const int room_data[DUNGEON_SIZE][DUNGEON_SIZE] = { 
-						{ NW ,NS ,NS ,NE },
-						{ EW ,NW ,NES,EW },
-						{ W  ,SE ,NW ,SE },
-						{ SEW,NW ,S  ,NES}};
-	Object sword= {swordBMP, {180,34,020},true,NULL};
-	Object armour={armourBMP,{280,34,020},true,NULL};
-	Object shield={shieldBMP,{180,32,120},true,NULL};
-	Object goblin1={goblinBMP,{050,32,150},true,NULL};
-	Object goblin2={goblinBMP,{050,32,150},true,NULL};
-	Object potion={potionBMP,{250,36,250},true,NULL};
-	Object troll= {trollBMP, {050,28,050},true,NULL};
-#elif (DUNGEON_SIZE == 6)
-	Player player = {{550,24,550},315};
-	const int room_data[DUNGEON_SIZE][DUNGEON_SIZE] = { 
-						{ NW ,N  ,NS ,N  ,N  ,NE },
-						{ W  ,S  ,NE ,W  ,0  ,E  },
-						{ EW ,NSW,0  ,0  ,0  ,E  },
-						{ W  ,NE ,SEW,SW ,0  ,E  },
-						{ W  ,0  ,NS ,NS ,0  ,E  },
-						{ SW ,S  ,NS ,NS ,S  ,SE }};
-	Object sword= {swordBMP, {180,34,020},true,NULL};
-	Object armour={armourBMP,{280,34,020},true,NULL};
-	Object shield={shieldBMP,{180,32,120},true,NULL};
-	Object goblin1={goblinBMP,{050,32,150},true,NULL};
-	Object goblin2={goblinBMP,{050,32,150},true,NULL};
-	Object potion={potionBMP,{250,36,250},true,NULL};
-	Object troll= {trollBMP, {050,28,050},true,NULL};
-#elif (DUNGEON_SIZE == 8)
-	Player player = {{750,24,350},315};
-	const int room_data[DUNGEON_SIZE][DUNGEON_SIZE] = { 
-						{ NEW,NSW,N  ,NS ,NS ,N  ,NS ,NE },
-						{ W  ,NES,EW ,NW ,NES,EW ,NW ,SE },
-						{ EW ,NW ,E  ,W  ,N  ,SE ,SW ,NE },
-						{ W  ,E  ,SW ,SE ,EW ,NW ,NS ,SE },
-						{ EW ,SW ,N  ,NS ,E  ,W  ,NS ,NS },
-						{ EW ,NSW,S  ,NE ,EW ,SW ,NS ,NE },
-						{ W  ,N  ,NS ,S  ,0  ,NS ,NES,EW },
-						{ SEW,SW ,NS ,NES,SEW,NSW,NS ,SE }};
-	Object sword=  {swordBMP, {150,34,180},true,NULL};
-	Object armour= {armourBMP,{780,34,450},true,NULL};
-	Object shield= {shieldBMP,{750,32,520},true,NULL};
-	Object goblin1={goblinBMP,{450,32,250},true,NULL};
-	Object goblin2={goblinBMP,{250,32,450},true,NULL};
-	Object potion= {potionBMP,{750,36,050},true,NULL};
-	Object troll=  {trollBMP, {450,28,750},true,NULL};
-#endif
-	Object *objects[]={&sword,&armour,&shield,&goblin1,&goblin2,&potion,&troll};
-	
-	const unsigned char *compass[8]={compassNBMP,compassNEBMP,compassEBMP,compassSEBMP,compassSBMP,compassSWBMP,compassWBMP,compassNWBMP};
-
-// Game functions
-void init_sprites(void);
-void draw_board(void);
-void reset_board(void);
+// compass bitmap array
+const unsigned char *compass[8]={compassNBMP,compassNEBMP,compassEBMP,compassSEBMP,compassSBMP,compassSWBMP,compassWBMP,compassNWBMP};
 
 /*********************************** GRAPHICS ******************************************/
 
@@ -159,27 +56,57 @@ long ADCdata;
 unsigned long TimerCount2A;
 unsigned long Semaphore2A;
 
-// Control functions
-void ADC0_Init(void);
-unsigned long ADC0_In(void);
-void Button_Init(void);
-void LED_Init(void);
-void LED1(int);
-void LED2(int);
-void Timer2_Init(unsigned long period);
-void Timer2A_Handler(void);
-int sine(int degrees);
-int cosine(int degrees);
-void game_over(void);
-void draw_line(const PointXY *a, const PointXY *b);
-void fill (const WallXY *wall, int shading);
-bool my3Dto2D (PointXY *screen_pos, const PointXYZ *point);
-void draw_pixel(PointXY *p, colour_e colour);
-int isqrt(int n);
-int distance (PointXYZ a, PointXYZ b);	
-void show_map(void);
+#include "map_data.c"
 
-void init_game()
+/* Main program */
+int main(void)
+{
+ 	init();
+	init_game();
+	// Preview the map on screen briefly
+	show_map();
+	Delay1ms(500);
+	
+	while (player.health > 0)
+	{
+		while (!tick) WaitForInterrupt();
+		tick = 0;
+		update_display();
+		// Update player direction based on Slide Pot 
+		player.rotation = (player.rotation + ADCdata + 360) % 360;
+		// If player is in combat then handle it
+		if (player.in_combat)
+		{
+			handle_combat();
+		}
+		// Service Action button
+		else if (GPIO_PORTE_DATA_R & BIT(0))
+		{
+			handle_movement();
+		}
+		// Service Alternate button
+		if (GPIO_PORTE_DATA_R & BIT(1))
+		{
+			show_map();
+			// wait here until map button is released
+			while (GPIO_PORTE_DATA_R & BIT(1)) WaitForInterrupt();
+		}
+	}
+}
+
+void update_display(void)
+{
+	// Start with a clear display buffer
+	Nokia5110_ClearBuffer();
+	// Draw the maze walls and maze objects
+	draw_maze();
+	// Add the fixed on-screen items
+	draw_fixed_objects();
+	// Push the new display to the LCD
+	Nokia5110_DisplayBuffer();
+}
+
+void init_game(void)
 {
 	int i,j,k,wall,c;
 	// For each room
@@ -252,21 +179,18 @@ void init_game()
 		if (!dungeon[y][x].objects->pos.y)
 			dungeon[y][x].objects->pos.y = WALL_HEIGHT - dungeon[y][x].objects->bitmap[22]/2;
 	}
-	// Preview the map on screen briefly
-	show_map();
-	Delay1ms(5000);
 }
 
 void show_map(void)
 {
 	int i,j,px=20,py=20;
+	const int SCALE=(SCREENH-1)/DUNGEON_SIZE;
 
 	Nokia5110_ClearBuffer();
 	for (i=0; i<DUNGEON_SIZE; i++)
 	{
 		for (j=0; j<DUNGEON_SIZE; j++)
 		{
-			const int SCALE=(SCREENH/DUNGEON_SIZE);
 			PointXY p1,p2,p3,p4;
 			p1.x = p4.x = j * SCALE;
 			p2.x = p3.x = j * SCALE + SCALE;
@@ -276,17 +200,24 @@ void show_map(void)
 			if (room_data[i][j] & EAST)  draw_line(&p2,&p3);
 			if (room_data[i][j] & SOUTH) draw_line(&p3,&p4);
 			if (room_data[i][j] & WEST)  draw_line(&p4,&p1);
+// removed objects from map as it makes map cluttered and game too easy!
 			if (dungeon[i][j].objects && dungeon[i][j].objects->exists)
-				myNokia5110_PrintResizedBMP (p4.x, p4.y, SCALE, 0x09, dungeon[i][j].objects->bitmap);
-			if ((player.pos.x/100) == i && (player.pos.z/100) == j)
 			{
-				// save the player position x,y coordinates
-				px = p4.x; py = p4.y;
+				if (dungeon[i][j].objects->type == ENEMY)
+					myNokia5110_PrintResizedBMP(p4.x, p4.y,SCALE,goblinBMP);
+				else
+					myNokia5110_PrintResizedBMP(p4.x, p4.y,SCALE,armourBMP);
+			}
+			if ((player.pos.x/WALL_LENGTH) == i && (player.pos.z/WALL_LENGTH) == j)
+			{
+				// save the player compass x,y coordinates
+				px = p4.x + SCALE/2 - compass[0][18]/2;
+				py = p4.y - SCALE/2 + compass[0][22]/2;
 			}
 		}
 	}
 	// show player position
-	myNokia5110_PrintBMP (px, py, playerBMP, 0x09);
+	myNokia5110_PrintBMP (px,py,compass[((player.rotation+112)%360)/45]);
 	Nokia5110_DisplayBuffer();
 }
 /*************************** CODE *****************************/
@@ -294,13 +225,13 @@ void show_map(void)
 void draw_maze (void)
 {
 	// start at maximum (possibly off map) distance from camera
-	int px = player.pos.z/100;
-	int py = player.pos.x/100;
+	int px = player.pos.z/WALL_LENGTH;
+	int py = player.pos.x/WALL_LENGTH;
 	int x,y,wall,range;
 	const WallXY ceiling = {{{0,SCREENH/2},{SCREENW-1,SCREENH/2},{SCREENW-1,0},{0,0}}};
 	const WallXY floor = {{{0,SCREENH-1},{SCREENW-1,SCREENH-1},{SCREENW-1,SCREENH/2},{0,SCREENH/2}}};
-	fill(&ceiling,1);
-	fill(&floor,4);
+	fill(&ceiling,0);
+	fill(&floor,2);
 	for (range = MIN(DUNGEON_SIZE,MAX_VIEW_RANGE); range >=0; range--)
 	{
 		for (y=py-range; y <= py+range; y++)
@@ -342,36 +273,45 @@ void draw_maze (void)
 							PointXYZ tpos3d;
 							int dist;
 							// Draw the wall
-							fill(&wall2d,10);
+							fill(&wall2d,0xff);
+
 							// and add a torch to the centre of the wall
 							tpos3d.x = (ptpos3d[0].x + ptpos3d[1].x + ptpos3d[2].x + ptpos3d[3].x) / 4;
 							tpos3d.y = (ptpos3d[0].y + ptpos3d[1].y + ptpos3d[2].y + ptpos3d[3].y) / 4;
 							tpos3d.z = (ptpos3d[0].z + ptpos3d[1].z + ptpos3d[2].z + ptpos3d[3].z) / 4;
+
 							my3Dto2D (&tpos2d, &tpos3d);
 							dist = distance(player.pos,tpos3d);
-							myNokia5110_PrintResizedBMP(
-								tpos2d.x, tpos2d.y, 										// screen x,y
-								ASPECT_RATIO_ZOOM * torch0BMP[18] / dist,	// resized width
-								9, torch0BMP);
+							if (TimerCount2A & 8)  // Torch flame flickers at refresh / 8 rate
+							{
+								myNokia5110_PrintResizedBMP(
+									tpos2d.x, tpos2d.y, 										// screen x,y
+									ASPECT_RATIO_ZOOM * torch0BMP[18] * 2 / dist,	// resized width
+									torch0BMP);
+							}
+							else
+							{
+								myNokia5110_PrintResizedBMP(
+									tpos2d.x, tpos2d.y, 										// screen x,y
+									ASPECT_RATIO_ZOOM * torch1BMP[18] * 2 / dist,	// resized width
+									torch1BMP);
+							}				
 						}
 						if (dungeon[y][x].objects && dungeon[y][x].objects->exists)
 						{
 							Object* pObj = dungeon[y][x].objects;
-							while (pObj)
+							if (pObj)
 							{
-								PointXY spos;
 								bool visible;
 
 								int dist = distance(pObj->pos,player.pos);
 								int width = ASPECT_RATIO_ZOOM * pObj->bitmap[18] / dist;
 								int height = ASPECT_RATIO_ZOOM * pObj->bitmap[22] / dist;
-								visible = my3Dto2D (&spos, &pObj->pos);
+								visible = my3Dto2D (&pObj->screenpos, &pObj->pos);
 								if ( visible && width > 0 && height > 0 )
 								{
-									myNokia5110_PrintResizedBMP (spos.x-width/2, spos.y+height/2, width, 0x09, pObj->bitmap);
+									myNokia5110_PrintResizedBMP (pObj->screenpos.x-width/2, pObj->screenpos.y+height/2, width, pObj->bitmap);
 								}
-								// Get next Object
-								pObj = dungeon[y][x].objects->next;
 							}
 						}
 					}
@@ -381,16 +321,20 @@ void draw_maze (void)
 	}
 }
 
-int isqrt(int n)
+int isqrt(int x)
 {
-  int b = 0;
-  while(n >= 0)
-  {
-    n = n - b;
-    b = b + 1;
-    n = n - b;
-  }
-  return b - 1;
+    int res=0;
+    int add=0x8000;   
+    int i;
+    for(i=0;i<16;i++)
+    {
+        int temp=res | add;
+        int g2=temp*temp;      
+        if (x>=g2)
+            res=temp;           
+        add>>=1;
+    }
+    return res;
 }
 
 int distance (PointXYZ a, PointXYZ b)
@@ -400,18 +344,86 @@ int distance (PointXYZ a, PointXYZ b)
 	return isqrt(dx*dx+dy*dy);
 }
 
+void display_small_int(char *screen_char, int value, int shift)
+{
+	int i,digit;
+	// 3x5 pixel numerals for use in health and damage bubbles, can be shifted to increase height
+	const unsigned char small_digits[10][3]={
+		{0xF8,0x88,0xF8}, // 0
+		{0x00,0xF8,0x00}, // 1
+		{0xE8,0xA8,0xB8}, // 2
+		{0x88,0xA8,0xF8}, // 3
+		{0x78,0x40,0xF0}, // 4
+		{0xB8,0xA8,0xE8}, // 5
+		{0xF8,0xA8,0xE8}, // 6
+		{0x08,0x08,0xF8}, // 7
+		{0xF8,0xA8,0xF8}, // 8
+		{0xB8,0xA8,0xF8}, // 9
+	};
+
+	if (value < 0) value=0;
+	while (value)
+	{
+		digit = value % 10;
+		value /= 10;
+		for (i=2; i>=0; i--)
+			*screen_char-- |= small_digits[digit][i]>>shift;
+		screen_char--;
+	}
+}
+
+#define WEAPON_ANIMATION_DURATION 15
+
+// display the screen artefacts which do not depend on current position
 void draw_fixed_objects(void)
 {
 	// equipped items
-	if (shield_equipped) myNokia5110_PrintBMP(0,SCREENH-1,equippedshieldBMP,9);
-	if (sword_equipped) myNokia5110_PrintBMP(SCREENW-1-equippedswordBMP[18],SCREENH-1,equippedswordBMP,9);
-	if (armour_equipped) myNokia5110_PrintBMP(SCREENW/2-equippedarmourBMP[18]/2,SCREENH-1,equippedarmourBMP,9);
+	if (player.shield_equipped) myNokia5110_PrintBMP(0,SCREENH-1,equippedshieldBMP);
+	if (player.sword_equipped) myNokia5110_PrintBMP(SCREENW-1-equippedswordBMP[18],SCREENH-1,equippedswordBMP);
+	if (player.armour_equipped) myNokia5110_PrintBMP(SCREENW/2-equippedarmourBMP[18]/2,SCREENH-1,equippedarmourBMP);
 	// show compass
-	myNokia5110_PrintBMP(0,9,compass[((player.rotation+112)%360)/45],9);
-	// show health
-	
+	myNokia5110_PrintBMP(0,9,compass[((player.rotation+112)%360)/45]);
+	// show heart and health
+	myNokia5110_PrintBMP(SCREENW-heartBMP[18]-1,heartBMP[22]-1,heartBMP);
+	display_small_int(&Screen[79],player.health,0);
+
+	if (player.in_combat)
+	{
+		static int animation_count=0;
+		Object *enemy = player.in_combat_with;
+		int x = enemy->screenpos.x-heartBMP[18]/2;
+		int y = SCREENH-1;
+
+		// Display any damage value
+		if (player.last_attack_value >= 0)
+		{
+			if (animation_count == 0) animation_count = WEAPON_ANIMATION_DURATION;
+			myNokia5110_PrintBMP(SCREENW-fistBMP[18]-damageBMP[18]+2,SCREENH-7,damageBMP);
+			display_small_int(&Screen[SCREENW-fistBMP[18]-1+4*SCREENW],player.last_attack_value,1);
+		}
+
+		// Display player weapon
+		if (!player.sword_equipped)
+		{
+			if (animation_count>0)
+			{
+				myNokia5110_PrintBMP(SCREENW-fistBMP[18],SCREENH-1,fistBMP);
+				if (--animation_count == 0) player.last_attack_value = 0;
+			}
+			else
+				myNokia5110_PrintBMP(SCREENW-fistBMP[18]/2,SCREENH+3,fistBMP);
+		}
+
+		// Display remaining enemy health
+		if (x > 0 && x < SCREENW-15)
+		{
+			myNokia5110_PrintResizedBMP(x,y+5,heartBMP[18]*3/2,heartBMP);
+			display_small_int(&Screen[x+y/8*SCREENW+14],enemy->health,3);
+		}
+	}
 }	
 
+// Show message on the LCD
 void show_message (char *message, const int delayms)
 {
 		Nokia5110_Clear();
@@ -420,134 +432,132 @@ void show_message (char *message, const int delayms)
 		Delay1ms(delayms);
 }
 
-/* Main program */
-int main(void)
+// Handle combat encounters
+void handle_combat(void)
 {
- 	init();
-	Nokia5110_DisplayBuffer();
-	init_game();
-
-	while (1)
+	int damage_reduction=0;   // maximum DR is 51/64 i.e. ~80%
+	int i,dmg;
+	PointXY enemy_pos;
+	Object *enemy = player.in_combat_with;
+	
+	// Check if enemy is behind player shield
+	my3Dto2D(&enemy_pos,&enemy->pos);
+	if (player.shield_equipped && enemy_pos.x < (SCREENW/2 -5))
+		// Apply 50% damage reduction for active shield
+		damage_reduction = 32;  // 32/64ths armour
+	if (player.armour_equipped)
+		damage_reduction = 19;  // 20/64ths armour
+	
+	// Player attacks enemy
+	if (!(TimerCount2A % player.atk_speed))
 	{
-		Nokia5110_ClearBuffer();
-		draw_maze();
-		draw_fixed_objects();
-		Delay1ms(20);
-		Nokia5110_DisplayBuffer();
-		player.rotation = (player.rotation + ADCdata + 360) % 360;
-		if (GPIO_PORTE_DATA_R & BIT(0))
+		for (i=0; i < player.atk_die_num; i++)
+			dmg += (Random() * player.atk_die_sides) >> 8;
+		enemy->health -= dmg;
+		if (enemy->health < 1)
 		{
-			Object *pObj;
-			int oldx=player.pos.x;
-			int oldz=player.pos.z;
-			int x,y;
-			player.pos.x += ((sine(player.rotation)>>13)+1)>>1;
-			y = player.pos.x / WALL_LENGTH;
-			player.pos.z += ((cosine(player.rotation)>>13)+1)>>1;
-			x = player.pos.z / WALL_LENGTH;
-			if (dungeon[y][x].wall[SOUTH_WALL].exists && (player.pos.x % WALL_LENGTH > WALL_LENGTH * 9 / 10))
-				player.pos.x = y * WALL_LENGTH + WALL_LENGTH * 9 / 10;
-			else if (dungeon[y][x].wall[NORTH_WALL].exists && (player.pos.x % WALL_LENGTH < WALL_LENGTH * 1 / 10))
-				player.pos.x = y * WALL_LENGTH + WALL_LENGTH * 1 / 10;
-			if (dungeon[y][x].wall[EAST_WALL].exists && (player.pos.z % WALL_LENGTH > WALL_LENGTH * 9 / 10))
-				player.pos.z = x * WALL_LENGTH + WALL_LENGTH * 9 / 10;
-			else if (dungeon[y][x].wall[WEST_WALL].exists && (player.pos.z % WALL_LENGTH < WALL_LENGTH * 1 / 10))
-				player.pos.z = x * WALL_LENGTH + WALL_LENGTH * 1 / 10;
-			pObj = dungeon[y][x].objects;
-			while (pObj)
-			{
-				if (pObj->exists && distance(player.pos,pObj->pos) < MAX(pObj->bitmap[22],pObj->bitmap[18])/2)
-				{
-					if (pObj == &armour)
-					{
-						armour_equipped = true;
-						armour.exists = false;
-						show_message (
-							"            "
-							"You've found"
-							"the armor it"
-							"will reduce "
-							"damage taken",
-							2000);
-					}
-					else if (pObj == &sword)
-					{
-						sword_equipped = true;
-						sword.exists = false;
-						show_message (
-							"You've found"
-							" the sword  "
-							"Keep enemies"
-							"on the right"
-							"to do damage"
-							"  with it",
-							3000);
-					}
-					else if (pObj == &shield)
-					{
-						shield_equipped = true;
-						shield.exists = false;
-						show_message (
-							"You've found"
-							" the shield "
-							"Keep enemies"
-							" on left to "
-							" block more "
-							"   damage",
-							3000);
-					}
-					else if (pObj == &potion && health < 100)
-					{
-						health = 100;
-						potion.exists = false;
-						show_message (
-							"            "
-							" The health "
-							"   potion   "
-							"  restores  "
-							"    you",
-							2000);
-					}
-					else // implement no-go zone for monsters!
-					{
-						player.pos.x = oldx;
-						player.pos.z = oldz;
-						in_combat = true;
-					}
-				}
-				pObj = pObj->next;
-			}
+			enemy->exists = false;
+			player.in_combat = false;
 		}
-		if (GPIO_PORTE_DATA_R & BIT(1))
+		player.last_attack_value = dmg;
+	}
+	
+	// Enemy attacks player
+	if (!(TimerCount2A % enemy->atk_speed))
+	{
+		for (i=0; i < enemy->atk_die_num; i++)
+			dmg += (Random() * enemy->atk_die_sides * (64 - damage_reduction)) >> 14;
+		player.health = player.health - dmg;
+		//show_damage(x,y,dmg);
+	}
+}
+
+void handle_movement(void)
+{
+	Object *pObj;
+	int oldx=player.pos.x;
+	int oldz=player.pos.z;
+	int x,y;
+	player.pos.x += ((sine(player.rotation)>>13)+1)>>1;
+	y = player.pos.x / WALL_LENGTH;
+	player.pos.z += ((cosine(player.rotation)>>13)+1)>>1;
+	x = player.pos.z / WALL_LENGTH;
+	if (dungeon[y][x].wall[SOUTH_WALL].exists && (player.pos.x % WALL_LENGTH > WALL_LENGTH * 9 / 10))
+		player.pos.x = y * WALL_LENGTH + WALL_LENGTH * 9 / 10;
+	else if (dungeon[y][x].wall[NORTH_WALL].exists && (player.pos.x % WALL_LENGTH < WALL_LENGTH * 1 / 10))
+		player.pos.x = y * WALL_LENGTH + WALL_LENGTH * 1 / 10;
+	if (dungeon[y][x].wall[EAST_WALL].exists && (player.pos.z % WALL_LENGTH > WALL_LENGTH * 9 / 10))
+		player.pos.z = x * WALL_LENGTH + WALL_LENGTH * 9 / 10;
+	else if (dungeon[y][x].wall[WEST_WALL].exists && (player.pos.z % WALL_LENGTH < WALL_LENGTH * 1 / 10))
+		player.pos.z = x * WALL_LENGTH + WALL_LENGTH * 1 / 10;
+	pObj = dungeon[y][x].objects;
+	if (pObj)
+	{
+		if (pObj->exists && distance(player.pos,pObj->pos) < MAX(pObj->bitmap[22],pObj->bitmap[18])/2)
 		{
-			show_map();
-			while (!GPIO_PORTE_DATA_R & BIT(1));
+			if (pObj == &armour)
+			{
+				player.armour_equipped = true;
+				armour.exists = false;
+				show_message (
+					"            "
+					"You've found"
+					"the armor it"
+					"will reduce "
+					"damage taken",
+					2000);
+			}
+			else if (pObj == &sword)
+			{
+				player.sword_equipped = true;
+				player.atk_die_num = SWORD_ATK_DIE;
+				player.atk_die_sides = SWORD_ATK_SIDES;
+				sword.exists = false;
+				show_message (
+					"You've found"
+					" the sword  "
+					"Keep enemies"
+					"on the right"
+					"to do damage"
+					"  with it",
+					3000);
+			}
+			else if (pObj == &shield)
+			{
+				player.shield_equipped = true;
+				shield.exists = false;
+				show_message (
+					"You've found"
+					" the shield "
+					"Keep enemies"
+					" on left to "
+					" block more "
+					"   damage",
+					3000);
+			}
+			else if (pObj == &potion && player.health < 99)
+			{
+				player.health = 99;
+				potion.exists = false;
+				show_message (
+					"            "
+					" The health "
+					"   potion   "
+					"  restores  "
+					"    you",
+					2000);
+			}
+			else // implement no-go zone for monsters!
+			{
+				player.pos.x = oldx;
+				player.pos.z = oldz;
+				player.in_combat = true;
+				player.in_combat_with = pObj;
+			}
 		}
 	}
 }
-/* Initialisation of constant global sprite values */
-void init_sprites(void){
-}
 
-/* Turn off a sprite */
-void destroy(Sprite *s){
-	s->exists=0;
-	s->bitmapn=0;
-}
-
-
-/* Draw all active sprites 
-void draw_board(void){
-	int i;
-	Nokia5110_ClearBuffer();
-	for (i=0; i<nsprites; i++)
-		if (sprite_list[i]->exists)
-			myNokia5110_PrintBMP(	sprite_list[i]->screenx,
-													sprite_list[i]->screeny,
-													sprite_list[i]->bitmap[sprite_list[i]->bitmapn],
-													0);
-  Nokia5110_DisplayBuffer();     // draw buffer
-}*/
 /* Hardware, Game and Sprite Initialisation */
 void init (void){
   TExaS_Init(SSI0_Real_Nokia5110_Scope);  // set system clock to 80 MHz
@@ -558,8 +568,7 @@ void init (void){
 	Button_Init();
 	LED_Init();
   Nokia5110_Init();
-	init_sprites();
-	Timer2_Init(CLOCK_SPEED/60); // Create 60Hz interrupt
+	Timer2_Init(CLOCK_SPEED/30); // Create 30Hz interrupt
 }
 
 /* Display the GAME OVER screen */
@@ -597,7 +606,7 @@ void Timer2_Init(unsigned long period){
 void Timer2A_Handler(void){ 
   TIMER2_ICR_R = TIMER_ICR_TATOCINT;   // acknowledge timer2A timeout
   TimerCount2A++;
-  Semaphore2A = 1; // trigger
+  tick = 1; // trigger
   ADCdata = ((long)(ADC0_In()-0x7FF))>>8;    // 3 - collect an ADC sample of player x pos
 }
 /* General purpose 100ms delay */
@@ -668,6 +677,7 @@ void Button_Init(void){
 	GPIO_PORTE_AMSEL_R &= BIT(1);         // Disable PE1 analog functions
 	GPIO_PORTE_PCTL_R &= ~(PCTL(1));      // Clear PCTL content for PE1
 }
+
 /* Request and wait for an ADC sample */
 unsigned long ADC0_In(void){
 //------------ADC0_In------------
@@ -681,6 +691,7 @@ unsigned long ADC0_In(void){
 	ADC0_ISC_R |= BIT(3);               // Clear SS3 ADC reading ready flag
   return (ADC_value);
 }
+
 /* Initialise sound DAC */
 void DAC_Init(void){
 // **************DAC_Init*********************
@@ -697,6 +708,7 @@ void DAC_Init(void){
 	GPIO_PORTB_DR8R_R  |=   DAC_PINS;
 	GPIO_PORTB_DEN_R   |=   DAC_PINS;
 }
+
 /* Output a single sound DAC step */ 
 void DAC_Out(unsigned long data){
 // **************DAC_Out*********************
@@ -706,6 +718,7 @@ void DAC_Out(unsigned long data){
 	data = (data & (DAC_PINS)) | (GPIO_PORTB_DATA_R & ~(DAC_PINS));
   GPIO_PORTB_DATA_R = data;
 }
+
 /* Initialise the DAC hardware for 5.5 KHz wav sound playback */
 void Sound_Init(void){
 // **************Sound_Init*********************
@@ -720,6 +733,7 @@ void Sound_Init(void){
 	NVIC_ST_CURRENT_R = 0;
 	NVIC_ST_CTRL_R = 7;
 }
+
 /* Turn LED1 on or off */
 void LED1 (int on) {
 	if (on)
@@ -734,6 +748,7 @@ void LED2 (int on) {
 	else
 		GPIO_PORTB_DATA_R &= ~(BIT(5));
 }
+
 /* Start playing a sound */
 void Sound_Tone(enum Sound sound){
 // **************Sound_Tone*********************
@@ -751,6 +766,7 @@ void Sound_Tone(enum Sound sound){
 		LED2(TRUE);
 	DAC_step[sound] = 0;
 }
+
 /* Stop playing a sound */
 void Sound_Off(int sound){
 // **************Sound_Off*********************
@@ -763,6 +779,7 @@ void Sound_Off(int sound){
 	else if (sound == SHOOT_SOUND)
 		LED2(FALSE);
 }
+
 /* Initialise LED hardware */
 void LED_Init(void){
 	/* LEDs are on PB4 and PB5 */
@@ -775,6 +792,7 @@ void LED_Init(void){
 	GPIO_PORTB_PCTL_R &= ~(PCTL(4)|PCTL(5));   // Clear PCTL content
 	GPIO_PORTB_DEN_R |=    (BIT(4)|BIT(5));    // Enable digital
 }
+
 /* Combine active sounds and pass to DAC hardware */
 void SysTick_Handler(void){
 // Interrupt service routine
@@ -806,18 +824,6 @@ void SysTick_Handler(void){
 ****************************************************************************************************
 ****************************************************************************************************/
 
-
-void draw_pixel(PointXY *p, colour_e colour)
-{
-	if (p->x >= 0 && p->x < SCREENW && p->y >= 0 && p->y < SCREENH)
-	{
-		if (colour == BLACK)
-			Screen[p->x+p->y/8*SCREENW] |= 1<<(p->y%8);
-		else
-			Screen[p->x+p->y/8*SCREENW] &= ~(1<<(p->y%8));
-	}
-}
-
 /* Draw the visible part of a line between two screen co-ordinates */
 void draw_line(const PointXY *a, const PointXY *b)
 {
@@ -828,7 +834,7 @@ void draw_line(const PointXY *a, const PointXY *b)
 	if (MAX(a->x,b->x)-MIN(a->x,b->x) > MAX(a->y,b->y)-MIN(a->y,b->y))
 	{
   	// draw a pixel for each valid x position between line start and end
-		for (x=MAX(0,MIN(a->x,b->x)); x<MIN(SCREENW,MAX(a->x,b->x)); x++)
+		for (x=MAX(0,MIN(a->x,b->x)); x<MIN(SCREENW,MAX(a->x,b->x))+1; x++)
 		{
 			slope = (((a->y - b->y)<<15)/(a->x - b->x));
 			y = (slope*(x - a->x)>>15) + a->y;
@@ -841,7 +847,7 @@ void draw_line(const PointXY *a, const PointXY *b)
 	else
 	{
 	// draw a pixel for each valid y position between line start and end
-		for (y=MAX(0,MIN(a->y,b->y)); y<MIN(SCREENH,MAX(a->y,b->y)); y++)
+		for (y=MAX(0,MIN(a->y,b->y)); y<MIN(SCREENH,MAX(a->y,b->y))+1; y++)
 		{
 			slope = (((a->x - b->x)<<15)/(a->y - b->y));
 			x = (slope*(y - a->y)>>15) + a->x;
@@ -856,7 +862,6 @@ void fill (const WallXY *wall, int shading)
 	int xmin = wall->corner[TOP_LEFT_CORNER].x+1;
 	int xmax = wall->corner[TOP_RIGHT_CORNER].x-1;
 	int x,y,ymin,ymax;
-	
 	// fill the wall pixels
 	for (x=xmin; x<=xmax; x++)
 	{
@@ -877,11 +882,11 @@ void fill (const WallXY *wall, int shading)
 		for (y = ymin; y < ymax; y++)
 		{
 			if (y < 0) y=0;
-			// If Y is off bottom of screen or already past end of shape then fill next column
+			// If Y is off bottom of screen or already past end of shape then skip to next column
 			if (y > ymax || y >= SCREENH)
 				break;
 			// paint a white pixel - or a texture pixel
-			if ((!((x+player.rotation)%shading) && !((y+player.rotation)%shading)))
+			if (!((x+y+player.rotation)&shading) && !((x-y+player.rotation)&shading))
 				Screen[x+y/8*SCREENW] |= 1<<(y%8);
 			else
 				Screen[x+y/8*SCREENW] &= ~(1<<(y%8));
@@ -943,4 +948,13 @@ bool my3Dto2D (PointXY *screen_pos, const PointXYZ *point)
 		screen_pos->y = ASPECT_RATIO_ZOOM*dy/dz + SCREENH/2;
 	}
 	return retval;
+}
+
+void trace (unsigned char *message)
+{
+	while (*message)
+	{
+		UART0_OutChar(*message);
+		message++;
+	}
 }

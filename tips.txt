@@ -1,3 +1,5 @@
 tail --bytes=+118 test.bmp | od -An -tx1 -v -w12 | sed 's/ //g;s/0/ /g'
 
 for filename in *.bmp; do printf "\nconst unsigned char ${filename/.bmp}BMP[] = { %s0xFF};\n" "$(for val in $(od -tx1 -An -v $filename); do printf "0x$val, ";done)"; done
+
+trace (char *); to output to uart

@@ -1,75 +1,35 @@
-#include <stdbool.h>
+#ifndef _DUNGEON_H_
+#define _DUNGEON_H_
 
-typedef enum colour_e
-{
-	WHITE=0,
-	BLACK=1
-} colour_e;
+#include "global.h"
 
-typedef struct PointXYZ
-{
-	int x;
-	int y;
-	int z;
-} PointXYZ;
+// Control functions
+void ADC0_Init(void);
+unsigned long ADC0_In(void);
+void Button_Init(void);
+void LED_Init(void);
+void LED1(int);
+void LED2(int);
+void Timer2_Init(unsigned long period);
+void Timer2A_Handler(void);
+int sine(int degrees);
+int cosine(int degrees);
+void game_over(void);
+void draw_line(const PointXY *a, const PointXY *b);
+void fill (const WallXY *wall, int shading);
+bool my3Dto2D (PointXY *screen_pos, const PointXYZ *point);
+void draw_pixel(PointXY *p, colour_e colour);
+int isqrt(int n);
+int distance (PointXYZ a, PointXYZ b);	
+void show_map(void);
+void handle_movement(void);
+void UART0_OutChar(unsigned char data);
+void trace (unsigned char *message);
+void draw_maze(void);
+void init_game(void);
+void draw_fixed_objects(void);
+void handle_combat(void);
+void update_display(void);
+void display_small_int(char *screen_char, int value, int shift);
 
-typedef struct PointXY
-{
-	int x;
-	int y;
-} PointXY;
-
-typedef struct Object
-{
-	const unsigned char* bitmap;
-	PointXYZ pos;
-	bool exists;
-	struct Object* next;
-} Object;
-
-typedef struct LLObjectNode
-{
-	Object *object;
-	struct LLObjectNode *next;
-} LLObjectNode;
-
-typedef enum wall_e
-{
-	NORTH=1,
-	EAST=2,
-	SOUTH=4,
-	WEST=8,
-	N=NORTH,
-	W=WEST,
-	E=EAST,
-	S=SOUTH,
-	NE=N|E,
-	NW=N|W,
-	NS=N|S,
-	EW=E|W,
-	SE=E|S,
-	SW=S|W,
-	NES=NE|S,
-	NEW=NE|W,
-	SEW=SE|W,
-	NSW=NS|W,
-	NSEW=NS|EW
-} wall_e;
-
-typedef struct WallXYZ
-{
-	PointXYZ corners[4];
-	bool exists;
-} WallXYZ;
-
-typedef struct WallXY
-{
-	PointXY corner[4];
-} WallXY;
-
-
-typedef struct Room
-{
-	Object* objects;
-	WallXYZ wall[4];
-} Room;
+#endif
