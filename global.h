@@ -40,16 +40,16 @@
 
 #define TROLL_ATK_DIE 2
 #define TROLL_ATK_SIDES 12
-#define TROLL_ATK_SPEED 36
+#define TROLL_ATK_SPEED 60
 #define TROLL_HEALTH 200
 #define GOBLIN_ATK_DIE 1
 #define GOBLIN_ATK_SIDES 4
-#define GOBLIN_ATK_SPEED 20
+#define GOBLIN_ATK_SPEED 25
 #define GOBLIN_HEALTH 60
-#define FIST_ATK_SPEED 10
+#define FIST_ATK_SPEED 30
 #define FIST_ATK_DIE 1
 #define FIST_ATK_SIDES 3
-#define SWORD_ATK_SPEED 16
+#define SWORD_ATK_SPEED 45
 #define SWORD_ATK_DIE 2
 #define SWORD_ATK_SIDES 6
 #define PLAYER_HEALTH 99
@@ -137,7 +137,8 @@ typedef struct Object
 	int atk_die_sides;
 	int atk_speed;
 	int health;
-	PointXY screenpos; // keep at end no need to initalize this
+	// uninitialised data
+	PointXY screenpos;
 } Object;
 
 typedef struct Player
@@ -152,7 +153,10 @@ typedef struct Player
 	int atk_die_sides;
 	int atk_speed;
 	bool in_combat;
+	// uninitialised data
 	int last_attack_value;
+	int last_attack_time;
+	bool shield_active;
 	Object *in_combat_with;
 } Player;
 

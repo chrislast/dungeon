@@ -430,11 +430,6 @@
               <FileType>1</FileType>
               <FilePath>.\TExaS.c</FilePath>
             </File>
-            <File>
-              <FileName>map_data.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\map_data.c</FilePath>
-            </File>
           </Files>
         </Group>
       </Groups>

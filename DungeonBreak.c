@@ -33,10 +33,97 @@
 #include "Random.h"
 #include "global.h"
 #include "dungeon.h"
-#include "bmp.h"
+#include "bmp.txt"
 
 #define MAX(a,b) ((a)>(b)?(a):(b))
 #define MIN(a,b) ((a)>(b)?(b):(a))
+
+// 3x3
+#if (DUNGEON_SIZE == 3)
+	Player player = {{150,24,050},90,PLAYER_HEALTH,NOT_EQUIPPED,NOT_EQUIPPED,NOT_EQUIPPED,FIST_ATK_DIE,FIST_ATK_SIDES,FIST_ATK_SPEED,NOT_IN_COMBAT,NULL,0};
+	const int room_data[DUNGEON_SIZE][DUNGEON_SIZE] = { 
+						{ NW ,NS ,NE },
+						{ W  ,N  ,E  },
+						{ SW ,S  ,SE }};
+	Object sword= {swordBMP, {180,34,020},true,ITEM};
+	Object armour={armourBMP,{280,34,020},true,ITEM};
+	Object shield={shieldBMP,{180,32,120},true,ITEM};
+	Object goblin={goblinBMP,{050,32,150},true,ENEMY,GOBLIN_ATK_DIE,GOBLIN_ATK_SIDES,GOBLIN_ATK_SPEED,GOBLIN_HEALTH};
+	Object potion={potionBMP,{250,36,250},true,ITEM};
+	Object troll= {trollBMP, {050,28,050},true,ENEMY,TROLL_ATK_DIE,TROLL_ATK_SIDES,TROLL_ATK_SPEED,TROLL_HEALTH};
+	Object *objects[]={&sword,&armour,&shield,&goblin,&potion,&troll};
+// 4x4
+#elif (DUNGEON_SIZE == 4)
+	Player player = {{150,24,250},270,PLAYER_HEALTH,NOT_EQUIPPED,NOT_EQUIPPED,NOT_EQUIPPED,FIST_ATK_DIE,FIST_ATK_SIDES,FIST_ATK_SPEED,NOT_IN_COMBAT,NULL,0};
+	const int room_data[DUNGEON_SIZE][DUNGEON_SIZE] = { 
+						{ NW ,NS ,NS ,NE },
+						{ EW ,NW ,NES,EW },
+						{ W  ,SE ,NW ,SE },
+						{ SEW,NW ,S  ,NES}};
+	Object sword= {swordBMP, {180,34,020},true,ITEM};
+	Object armour={armourBMP,{280,34,020},true,ITEM};
+	Object shield={shieldBMP,{180,32,120},true,ITEM};
+	Object goblin1={goblinBMP,{050,32,150},true,ENEMY,GOBLIN_ATK_DIE,GOBLIN_ATK_SIDES,GOBLIN_ATK_SPEED,GOBLIN_HEALTH};
+	Object goblin2={goblinBMP,{050,32,150},true,ENEMY,GOBLIN_ATK_DIE,GOBLIN_ATK_SIDES,GOBLIN_ATK_SPEED,GOBLIN_HEALTH};
+	Object potion={potionBMP,{250,36,250},true,ITEM};
+	Object troll= {trollBMP, {050,28,050},true,ENEMY,TROLL_ATK_DIE,TROLL_ATK_SIDES,TROLL_ATK_SPEED,TROLL_HEALTH};
+	Object *objects[]={&sword,&armour,&shield,&goblin1,&goblin2,&potion,&troll};
+// 6x6
+#elif (DUNGEON_SIZE == 6)
+	Player player = {{550,24,550},225,PLAYER_HEALTH,NOT_EQUIPPED,NOT_EQUIPPED,NOT_EQUIPPED,FIST_ATK_DIE,FIST_ATK_SIDES,FIST_ATK_SPEED,NOT_IN_COMBAT,NULL,0};
+	const int room_data[DUNGEON_SIZE][DUNGEON_SIZE] = { 
+						{ NW ,N  ,NS ,N  ,N  ,NE },
+						{ W  ,S  ,NE ,W  ,0  ,E  },
+						{ EW ,NSW,0  ,0  ,0  ,E  },
+						{ W  ,NE ,SEW,SW ,0  ,E  },
+						{ W  ,0  ,NS ,NS ,0  ,E  },
+						{ SW ,S  ,NS ,NS ,S  ,SE }};
+	Object sword= {swordBMP, {180,34,020},true,ITEM};
+	Object armour={armourBMP,{280,34,020},true,ITEM};
+	Object shield={shieldBMP,{180,32,120},true,ITEM};
+	Object goblin1={goblinBMP,{050,32,150},true,ENEMY,GOBLIN_ATK_DIE,GOBLIN_ATK_SIDES,GOBLIN_ATK_SPEED,GOBLIN_HEALTH};
+	Object goblin2={goblinBMP,{050,32,150},true,ENEMY,GOBLIN_ATK_DIE,GOBLIN_ATK_SIDES,GOBLIN_ATK_SPEED,GOBLIN_HEALTH};
+	Object potion={potionBMP,{250,36,250},true,ITEM};
+	Object troll= {trollBMP, {050,28,050},true,ENEMY,TROLL_ATK_DIE,TROLL_ATK_SIDES,TROLL_ATK_SPEED,TROLL_HEALTH};
+	Object *objects[]={&sword,&armour,&shield,&goblin1,&goblin2,&potion,&troll};
+// 8x8
+#elif (DUNGEON_SIZE == 8)
+	#define PLAYER_X 750
+	#define PLAYER_Y 24
+	#define PLAYER_Z 350
+	#define PLAYER_ROTATION 180
+	const int room_data[DUNGEON_SIZE][DUNGEON_SIZE] = { 
+						{ NEW,NSW,N  ,NS ,NS ,N  ,NS ,NE },
+						{ W  ,NES,EW ,NW ,NES,EW ,NW ,SE },
+						{ EW ,NW ,E  ,W  ,N  ,SE ,SW ,NE },
+						{ W  ,E  ,SW ,SE ,EW ,NW ,NS ,SE },
+						{ EW ,SW ,N  ,NS ,E  ,W  ,NS ,NS },
+						{ EW ,NSW,S  ,NE ,EW ,SW ,NS ,NE },
+						{ W  ,N  ,NS ,S  ,0  ,NS ,NES,EW },
+						{ SEW,SW ,NS ,NES,SEW,NSW,NS ,SE }};
+	Object sword=  {swordBMP, {150,34,180},true,ITEM};
+	Object armour= {armourBMP,{780,34,450},true,ITEM};
+	Object shield= {shieldBMP,{750,32,520},true,ITEM};
+	Object goblin1={goblinBMP,{750,32,250},true,ENEMY,GOBLIN_ATK_DIE,GOBLIN_ATK_SIDES,GOBLIN_ATK_SPEED,GOBLIN_HEALTH};
+	Object goblin2={goblinBMP,{250,32,450},true,ENEMY,GOBLIN_ATK_DIE,GOBLIN_ATK_SIDES,GOBLIN_ATK_SPEED,GOBLIN_HEALTH};
+	Object potion= {potionBMP,{750,36,050},true,ITEM};
+	Object troll=  {trollBMP, {450,28,750},true,ENEMY,TROLL_ATK_DIE,TROLL_ATK_SIDES,TROLL_ATK_SPEED,TROLL_HEALTH};
+	Object *objects[]={&sword,&armour,&shield,&goblin1,&goblin2,&potion,&troll};
+#endif
+
+Player player = {
+	{PLAYER_X,PLAYER_Y,PLAYER_Z},
+		PLAYER_ROTATION,
+		PLAYER_HEALTH,
+		NOT_EQUIPPED,
+		NOT_EQUIPPED,
+		NOT_EQUIPPED,
+		FIST_ATK_DIE,
+		FIST_ATK_SIDES,
+		FIST_ATK_SPEED,
+		NOT_IN_COMBAT,
+		NULL,
+		0};
 
 // Global parameters
 int tick;
@@ -273,7 +360,7 @@ void draw_maze (void)
 							PointXYZ tpos3d;
 							int dist;
 							// Draw the wall
-							fill(&wall2d,0xff);
+							fill(&wall2d,1);
 
 							// and add a torch to the centre of the wall
 							tpos3d.x = (ptpos3d[0].x + ptpos3d[1].x + ptpos3d[2].x + ptpos3d[3].x) / 4;
@@ -372,14 +459,19 @@ void display_small_int(char *screen_char, int value, int shift)
 	}
 }
 
-#define WEAPON_ANIMATION_DURATION 15
+#define WEAPON_ANIMATION_DURATION (player.atk_speed/2);
 
 // display the screen artefacts which do not depend on current position
 void draw_fixed_objects(void)
 {
 	// equipped items
-	if (player.shield_equipped) myNokia5110_PrintBMP(0,SCREENH-1,equippedshieldBMP);
-	if (player.sword_equipped) myNokia5110_PrintBMP(SCREENW-1-equippedswordBMP[18],SCREENH-1,equippedswordBMP);
+	if (player.shield_equipped) 
+	{
+		if (player.shield_active && player.in_combat)
+			myNokia5110_PrintResizedBMP(0,SCREENH-1,equippedshieldBMP[18]*3/2,equippedshieldBMP);
+		else
+			myNokia5110_PrintBMP(0,SCREENH-1,equippedshieldBMP);
+	}
 	if (player.armour_equipped) myNokia5110_PrintBMP(SCREENW/2-equippedarmourBMP[18]/2,SCREENH-1,equippedarmourBMP);
 	// show compass
 	myNokia5110_PrintBMP(0,9,compass[((player.rotation+112)%360)/45]);
@@ -394,12 +486,20 @@ void draw_fixed_objects(void)
 		int x = enemy->screenpos.x-heartBMP[18]/2;
 		int y = SCREENH-1;
 
-		// Display any damage value
-		if (player.last_attack_value >= 0)
+		// Display remaining enemy health
+		if (x > 0 && x < SCREENW-15)
 		{
-			if (animation_count == 0) animation_count = WEAPON_ANIMATION_DURATION;
+			myNokia5110_PrintResizedBMP(x,y+5,heartBMP[18]*3/2,heartBMP);
+			display_small_int(&Screen[x+y/8*SCREENW+14],enemy->health,3);
+		}
+
+		// Display any damage value
+		if (player.last_attack_value > 0)
+		{
+			if (animation_count == 0)
+				animation_count = WEAPON_ANIMATION_DURATION;
 			myNokia5110_PrintBMP(SCREENW-fistBMP[18]-damageBMP[18]+2,SCREENH-7,damageBMP);
-			display_small_int(&Screen[SCREENW-fistBMP[18]-1+4*SCREENW],player.last_attack_value,1);
+			display_small_int(&Screen[SCREENW-fistBMP[18]-6+4*SCREENW],player.last_attack_value,3);
 		}
 
 		// Display player weapon
@@ -407,20 +507,26 @@ void draw_fixed_objects(void)
 		{
 			if (animation_count>0)
 			{
-				myNokia5110_PrintBMP(SCREENW-fistBMP[18],SCREENH-1,fistBMP);
-				if (--animation_count == 0) player.last_attack_value = 0;
+				myNokia5110_PrintBMP(SCREENW-fistBMP[18]+player.atk_speed/2-animation_count,SCREENH-1,fistBMP);
+				if (--animation_count == 0)
+					player.last_attack_value = 0;
 			}
 			else
 				myNokia5110_PrintBMP(SCREENW-fistBMP[18]/2,SCREENH+3,fistBMP);
 		}
-
-		// Display remaining enemy health
-		if (x > 0 && x < SCREENW-15)
+		else
 		{
-			myNokia5110_PrintResizedBMP(x,y+5,heartBMP[18]*3/2,heartBMP);
-			display_small_int(&Screen[x+y/8*SCREENW+14],enemy->health,3);
+				if (animation_count>0)
+				{
+					myNokia5110_PrintBMP(SCREENW-1-equippedswordBMP[18]+animation_count*4-player.atk_speed,SCREENH-1-animation_count*4+player.atk_speed,equippedswordBMP);
+					if (--animation_count == 0)
+						player.last_attack_value = 0;
+				}
+				else
+					myNokia5110_PrintBMP(SCREENW-1-equippedswordBMP[18],SCREENH-1,equippedswordBMP);
 		}
 	}
+	else if (player.sword_equipped) myNokia5110_PrintBMP(SCREENW-1-equippedswordBMP[18],SCREENH-1,equippedswordBMP);
 }	
 
 // Show message on the LCD
@@ -442,17 +548,25 @@ void handle_combat(void)
 	
 	// Check if enemy is behind player shield
 	my3Dto2D(&enemy_pos,&enemy->pos);
-	if (player.shield_equipped && enemy_pos.x < (SCREENW/2 -5))
+	if (player.shield_equipped && enemy_pos.x < SCREENW/2)
+	{
 		// Apply 50% damage reduction for active shield
+		player.shield_active = true;
 		damage_reduction = 32;  // 32/64ths armour
+	}
+	else
+		player.shield_active = false;
 	if (player.armour_equipped)
 		damage_reduction = 19;  // 20/64ths armour
 	
 	// Player attacks enemy
-	if (!(TimerCount2A % player.atk_speed))
-	{
+	if ((GPIO_PORTE_DATA_R & BIT(0)) && 	                        // if action button is pressed and
+		TimerCount2A >= player.last_attack_time+player.atk_speed && // swing timer elapsed and
+		enemy_pos.x > SCREENW/2 &&           // enemy centre is right of screen and
+		enemy_pos.x < SCREENW)               // enemy is on screen
+	{ // then do damage to enemy
 		for (i=0; i < player.atk_die_num; i++)
-			dmg += (Random() * player.atk_die_sides) >> 8;
+			dmg += ((Random() * player.atk_die_sides) + 1) >> 8;
 		enemy->health -= dmg;
 		if (enemy->health < 1)
 		{
@@ -460,15 +574,15 @@ void handle_combat(void)
 			player.in_combat = false;
 		}
 		player.last_attack_value = dmg;
+		player.last_attack_time = TimerCount2A;
 	}
 	
 	// Enemy attacks player
-	if (!(TimerCount2A % enemy->atk_speed))
-	{
+	if (!(TimerCount2A % enemy->atk_speed)) // if enemy swing timer elapsed
+	{ // then do damage to player
 		for (i=0; i < enemy->atk_die_num; i++)
-			dmg += (Random() * enemy->atk_die_sides * (64 - damage_reduction)) >> 14;
+			dmg += (((Random() * enemy->atk_die_sides) + 1) * (64 - damage_reduction)) >> 14;
 		player.health = player.health - dmg;
-		//show_damage(x,y,dmg);
 	}
 }
 
@@ -886,10 +1000,21 @@ void fill (const WallXY *wall, int shading)
 			if (y > ymax || y >= SCREENH)
 				break;
 			// paint a white pixel - or a texture pixel
-			if (!((x+y+player.rotation)&shading) && !((x-y+player.rotation)&shading))
-				Screen[x+y/8*SCREENW] |= 1<<(y%8);
+			if (shading == 99)
+			{
+				if (TimerCount2A & 1)
+					Screen[x+y/8*SCREENW] |= 1<<(y%8);
+				else
+					Screen[x+y/8*SCREENW] &= ~(1<<(y%8));
+			}
 			else
-				Screen[x+y/8*SCREENW] &= ~(1<<(y%8));
+			{
+				if (!((x+y+player.rotation)&shading) && !((x-y+player.rotation)&shading))
+					Screen[x+y/8*SCREENW] |= 1<<(y%8);
+				else
+					Screen[x+y/8*SCREENW] &= ~(1<<(y%8));
+	
+			}
 		}
 	}
 	// draw the wall outline
