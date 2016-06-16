@@ -38,6 +38,11 @@
 #define MAX(a,b) ((a)>(b)?(a):(b))
 #define MIN(a,b) ((a)>(b)?(b):(a))
 
+
+EnemyData g1data = {goblinCBMP, GOBLIN_ATK_DIE,GOBLIN_ATK_SIDES,GOBLIN_ATK_SPEED,GOBLIN_HEALTH};
+EnemyData g2data = {goblinCBMP, GOBLIN_ATK_DIE,GOBLIN_ATK_SIDES,GOBLIN_ATK_SPEED,GOBLIN_HEALTH};
+EnemyData t1data = {trollBMP, ENEMY,TROLL_ATK_DIE,TROLL_ATK_SIDES,TROLL_ATK_SPEED,TROLL_HEALTH};
+
 // 3x3
 #if (DUNGEON_SIZE == 3)
 	Player player = {{150,24,050},90,PLAYER_HEALTH,NOT_EQUIPPED,NOT_EQUIPPED,NOT_EQUIPPED,FIST_ATK_DIE,FIST_ATK_SIDES,FIST_ATK_SPEED,NOT_IN_COMBAT,NULL,0};
@@ -48,9 +53,9 @@
 	Object sword= {swordBMP, {180,34,020},true,ITEM};
 	Object armour={armourBMP,{280,34,020},true,ITEM};
 	Object shield={shieldBMP,{180,32,120},true,ITEM};
-	Object goblin={goblinBMP,{050,32,150},true,ENEMY,GOBLIN_ATK_DIE,GOBLIN_ATK_SIDES,GOBLIN_ATK_SPEED,GOBLIN_HEALTH};
+	Object goblin={goblinBMP,{050,32,150},true,ENEMY,&g1data};
 	Object potion={potionBMP,{250,36,250},true,ITEM};
-	Object troll= {trollBMP, {050,28,050},true,ENEMY,TROLL_ATK_DIE,TROLL_ATK_SIDES,TROLL_ATK_SPEED,TROLL_HEALTH};
+	Object troll= {trollBMP, {050,28,050},true,ENEMY,&t1data};
 	Object *objects[]={&sword,&armour,&shield,&goblin,&potion,&troll};
 // 4x4
 #elif (DUNGEON_SIZE == 4)
@@ -63,10 +68,10 @@
 	Object sword= {swordBMP, {180,34,020},true,ITEM};
 	Object armour={armourBMP,{280,34,020},true,ITEM};
 	Object shield={shieldBMP,{180,32,120},true,ITEM};
-	Object goblin1={goblinBMP,{050,32,150},true,ENEMY,GOBLIN_ATK_DIE,GOBLIN_ATK_SIDES,GOBLIN_ATK_SPEED,GOBLIN_HEALTH};
-	Object goblin2={goblinBMP,{050,32,150},true,ENEMY,GOBLIN_ATK_DIE,GOBLIN_ATK_SIDES,GOBLIN_ATK_SPEED,GOBLIN_HEALTH};
+	Object goblin1={goblinBMP,{050,32,150},true,ENEMY,&g1data};
+	Object goblin2={goblinBMP,{050,32,150},true,ENEMY,&g2data};
 	Object potion={potionBMP,{250,36,250},true,ITEM};
-	Object troll= {trollBMP, {050,28,050},true,ENEMY,TROLL_ATK_DIE,TROLL_ATK_SIDES,TROLL_ATK_SPEED,TROLL_HEALTH};
+	Object troll= {trollBMP, {050,28,050},true,ENEMY,&t1data};
 	Object *objects[]={&sword,&armour,&shield,&goblin1,&goblin2,&potion,&troll};
 // 6x6
 #elif (DUNGEON_SIZE == 6)
@@ -81,10 +86,10 @@
 	Object sword= {swordBMP, {180,34,020},true,ITEM};
 	Object armour={armourBMP,{280,34,020},true,ITEM};
 	Object shield={shieldBMP,{180,32,120},true,ITEM};
-	Object goblin1={goblinBMP,{050,32,150},true,ENEMY,GOBLIN_ATK_DIE,GOBLIN_ATK_SIDES,GOBLIN_ATK_SPEED,GOBLIN_HEALTH};
-	Object goblin2={goblinBMP,{050,32,150},true,ENEMY,GOBLIN_ATK_DIE,GOBLIN_ATK_SIDES,GOBLIN_ATK_SPEED,GOBLIN_HEALTH};
+	Object goblin1={goblinBMP,{050,32,150},true,ENEMY,&g1data};
+	Object goblin2={goblinBMP,{050,32,150},true,ENEMY,&g2data};
 	Object potion={potionBMP,{250,36,250},true,ITEM};
-	Object troll= {trollBMP, {050,28,050},true,ENEMY,TROLL_ATK_DIE,TROLL_ATK_SIDES,TROLL_ATK_SPEED,TROLL_HEALTH};
+	Object troll= {trollBMP, {050,28,050},true,ENEMY,&t1data};
 	Object *objects[]={&sword,&armour,&shield,&goblin1,&goblin2,&potion,&troll};
 // 8x8
 #elif (DUNGEON_SIZE == 8)
@@ -104,10 +109,10 @@
 	Object sword=  {swordBMP, {150,34,180},true,ITEM};
 	Object armour= {armourBMP,{780,34,450},true,ITEM};
 	Object shield= {shieldBMP,{750,32,520},true,ITEM};
-	Object goblin1={goblinBMP,{750,32,250},true,ENEMY,GOBLIN_ATK_DIE,GOBLIN_ATK_SIDES,GOBLIN_ATK_SPEED,GOBLIN_HEALTH};
-	Object goblin2={goblinBMP,{250,32,450},true,ENEMY,GOBLIN_ATK_DIE,GOBLIN_ATK_SIDES,GOBLIN_ATK_SPEED,GOBLIN_HEALTH};
+	Object goblin1={goblinBMP,{750,32,250},true,ENEMY,&g1data};
+	Object goblin2={goblinBMP,{250,32,450},true,ENEMY,&g2data};
 	Object potion= {potionBMP,{750,36,050},true,ITEM};
-	Object troll=  {trollBMP, {450,28,750},true,ENEMY,TROLL_ATK_DIE,TROLL_ATK_SIDES,TROLL_ATK_SPEED,TROLL_HEALTH};
+	Object troll=  {trollBMP, {450,28,750},true,ENEMY,&t1data};
 	Object *objects[]={&sword,&armour,&shield,&goblin1,&goblin2,&potion,&troll};
 #endif
 
@@ -129,8 +134,6 @@ Player player = {
 int tick;
 		
 Room dungeon[DUNGEON_SIZE][DUNGEON_SIZE];
-// compass bitmap array
-const unsigned char *compass[8]={compassNBMP,compassNEBMP,compassEBMP,compassSEBMP,compassSBMP,compassSWBMP,compassWBMP,compassNWBMP};
 
 /*********************************** GRAPHICS ******************************************/
 
@@ -166,17 +169,20 @@ int main(void)
 		{
 			handle_combat();
 		}
-		// Service Action button
-		else if (GPIO_PORTE_DATA_R & BIT(0))
+		else
 		{
-			handle_movement();
-		}
-		// Service Alternate button
-		if (GPIO_PORTE_DATA_R & BIT(1))
-		{
-			show_map();
-			// wait here until map button is released
-			while (GPIO_PORTE_DATA_R & BIT(1)) WaitForInterrupt();
+			// Service Action button
+			if (GPIO_PORTE_DATA_R & BIT(0))
+			{
+				handle_movement();
+			}
+			// Service Alternate button
+			if (GPIO_PORTE_DATA_R & BIT(1))
+			{
+				show_map();
+				// wait here until map button is released
+				while (GPIO_PORTE_DATA_R & BIT(1)) WaitForInterrupt();
+			}
 		}
 	}
 }
@@ -291,20 +297,20 @@ void show_map(void)
 			if (dungeon[i][j].objects && dungeon[i][j].objects->exists)
 			{
 				if (dungeon[i][j].objects->type == ENEMY)
-					myNokia5110_PrintResizedBMP(p4.x, p4.y,SCALE,goblinBMP);
+					myNokia5110_PrintResizedBMP(p4.x, p4.y,SCALE,goblinBMP,0);
 				else
-					myNokia5110_PrintResizedBMP(p4.x, p4.y,SCALE,armourBMP);
+					myNokia5110_PrintResizedBMP(p4.x, p4.y,SCALE,armourBMP,0);
 			}
 			if ((player.pos.x/WALL_LENGTH) == i && (player.pos.z/WALL_LENGTH) == j)
 			{
 				// save the player compass x,y coordinates
-				px = p4.x + SCALE/2 - compass[0][18]/2;
-				py = p4.y - SCALE/2 + compass[0][22]/2;
+				px = p4.x + SCALE/2 - compassBMP[18]/2;
+				py = p4.y - SCALE/2 + compassBMP[22]/2;
 			}
 		}
 	}
 	// show player position
-	myNokia5110_PrintBMP (px,py,compass[((player.rotation+112)%360)/45]);
+	myNokia5110_PrintBMP (px,py,compassBMP);
 	Nokia5110_DisplayBuffer();
 }
 /*************************** CODE *****************************/
@@ -369,20 +375,11 @@ void draw_maze (void)
 
 							my3Dto2D (&tpos2d, &tpos3d);
 							dist = distance(player.pos,tpos3d);
-							if (TimerCount2A & 8)  // Torch flame flickers at refresh / 8 rate
-							{
-								myNokia5110_PrintResizedBMP(
+							myNokia5110_PrintResizedBMP(
 									tpos2d.x, tpos2d.y, 										// screen x,y
-									ASPECT_RATIO_ZOOM * torch0BMP[18] * 2 / dist,	// resized width
-									torch0BMP);
-							}
-							else
-							{
-								myNokia5110_PrintResizedBMP(
-									tpos2d.x, tpos2d.y, 										// screen x,y
-									ASPECT_RATIO_ZOOM * torch1BMP[18] * 2 / dist,	// resized width
-									torch1BMP);
-							}				
+									ASPECT_RATIO_ZOOM * torchBMP[18] * 2 / dist,	// resized width
+									torchBMP, 
+									TimerCount2A & 8); // animation rate
 						}
 						if (dungeon[y][x].objects && dungeon[y][x].objects->exists)
 						{
@@ -393,11 +390,15 @@ void draw_maze (void)
 
 								int dist = distance(pObj->pos,player.pos);
 								int width = ASPECT_RATIO_ZOOM * pObj->bitmap[18] / dist;
+								
 								int height = ASPECT_RATIO_ZOOM * pObj->bitmap[22] / dist;
 								visible = my3Dto2D (&pObj->screenpos, &pObj->pos);
 								if ( visible && width > 0 && height > 0 )
 								{
-									myNokia5110_PrintResizedBMP (pObj->screenpos.x-width/2, pObj->screenpos.y+height/2, width, pObj->bitmap);
+									if (player.in_combat && player.in_combat_with == pObj)
+										myNokia5110_PrintResizedBMP (pObj->screenpos.x-width/2, pObj->screenpos.y+height/2, width, pObj->data.enemy->combat_bitmap, (TimerCount2A&32)>>5);
+									else
+										myNokia5110_PrintResizedBMP (pObj->screenpos.x-width/2, pObj->screenpos.y+height/2, width, pObj->bitmap, (TimerCount2A&32)>>5);
 								}
 							}
 						}
@@ -459,7 +460,7 @@ void display_small_int(char *screen_char, int value, int shift)
 	}
 }
 
-#define WEAPON_ANIMATION_DURATION (player.atk_speed/2);
+#define WEAPON_ANIMATION_DURATION (player.atk_speed);
 
 // display the screen artefacts which do not depend on current position
 void draw_fixed_objects(void)
@@ -468,13 +469,22 @@ void draw_fixed_objects(void)
 	if (player.shield_equipped) 
 	{
 		if (player.shield_active && player.in_combat)
-			myNokia5110_PrintResizedBMP(0,SCREENH-1,equippedshieldBMP[18]*3/2,equippedshieldBMP);
+			myNokia5110_PrintResizedBMP(0,SCREENH-1,equippedshieldBMP[18]*3/2,equippedshieldBMP,0);
 		else
 			myNokia5110_PrintBMP(0,SCREENH-1,equippedshieldBMP);
 	}
-	if (player.armour_equipped) myNokia5110_PrintBMP(SCREENW/2-equippedarmourBMP[18]/2,SCREENH-1,equippedarmourBMP);
+	if (player.armour_equipped)
+		myNokia5110_PrintBMP(SCREENW/2-equippedarmourBMP[18]/2,SCREENH-1,equippedarmourBMP);
 	// show compass
-	myNokia5110_PrintBMP(0,9,compass[((player.rotation+112)%360)/45]);
+	{
+		int i = ((player.rotation+248)%360)/45;
+		const int step[8][2] = {{-1,1},{-1,0},{-1,-1},{0,-1},{1,-1},{1,0},{1,1},{0,1}};
+		// screenpos of (0,6) based on 7x7 compass bitmap
+		myNokia5110_PrintBMP(0,6,compassBMP);
+		// draw needle from centre point (3,3) of compass
+		set_pixel(3+step[i][0], 3+step[i][1]);
+		set_pixel(3+step[i][0]*2, 3+step[i][1]*2);		
+	}
 	// show heart and health
 	myNokia5110_PrintBMP(SCREENW-heartBMP[18]-1,heartBMP[22]-1,heartBMP);
 	display_small_int(&Screen[79],player.health,0);
@@ -482,14 +492,14 @@ void draw_fixed_objects(void)
 	if (player.in_combat)
 	{
 		static int animation_count=0;
-		Object *enemy = player.in_combat_with;
+		EnemyData *enemy = player.in_combat_with->data.enemy;
 		int x = enemy->screenpos.x-heartBMP[18]/2;
 		int y = SCREENH-1;
 
 		// Display remaining enemy health
 		if (x > 0 && x < SCREENW-15)
 		{
-			myNokia5110_PrintResizedBMP(x,y+5,heartBMP[18]*3/2,heartBMP);
+			myNokia5110_PrintResizedBMP(x,y+5,heartBMP[18]*3/2,heartBMP,0);
 			display_small_int(&Screen[x+y/8*SCREENW+14],enemy->health,3);
 		}
 
@@ -543,34 +553,35 @@ void handle_combat(void)
 {
 	int damage_reduction=0;   // maximum DR is 51/64 i.e. ~80%
 	int i,dmg;
-	PointXY enemy_pos;
-	Object *enemy = player.in_combat_with;
+	EnemyData *enemy = player.in_combat_with->data.enemy;
 	
-	// Check if enemy is behind player shield
-	my3Dto2D(&enemy_pos,&enemy->pos);
-	if (player.shield_equipped && enemy_pos.x < SCREENW/2)
+	if ((GPIO_PORTE_DATA_R & BIT(1)) && 	                        // if shield button is pressed and
+		player.shield_equipped &&
+		TimerCount2A >= player.last_shield_time+player.shield_cd)   // shield timer elapsed
+	{
+		player.last_shield_time = TimerCount2A;
+		player.shield_active = true;
+	}
+
+	if (player.shield_active == true)
 	{
 		// Apply 50% damage reduction for active shield
-		player.shield_active = true;
 		damage_reduction = 32;  // 32/64ths armour
 	}
-	else
-		player.shield_active = false;
+
 	if (player.armour_equipped)
 		damage_reduction = 19;  // 20/64ths armour
 	
 	// Player attacks enemy
 	if ((GPIO_PORTE_DATA_R & BIT(0)) && 	                        // if action button is pressed and
-		TimerCount2A >= player.last_attack_time+player.atk_speed && // swing timer elapsed and
-		enemy_pos.x > SCREENW/2 &&           // enemy centre is right of screen and
-		enemy_pos.x < SCREENW)               // enemy is on screen
+		TimerCount2A >= player.last_attack_time+player.atk_speed)   // swing timer elapsed
 	{ // then do damage to enemy
 		for (i=0; i < player.atk_die_num; i++)
-			dmg += ((Random() * player.atk_die_sides) + 1) >> 8;
+			dmg += ((Random() * player.atk_die_sides) >> 8) + 1;
 		enemy->health -= dmg;
 		if (enemy->health < 1)
 		{
-			enemy->exists = false;
+			player.in_combat_with->exists = false;
 			player.in_combat = false;
 		}
 		player.last_attack_value = dmg;
@@ -630,8 +641,7 @@ void handle_movement(void)
 				show_message (
 					"You've found"
 					" the sword  "
-					"Keep enemies"
-					"on the right"
+					"Press attack"
 					"to do damage"
 					"  with it",
 					3000);
@@ -639,14 +649,16 @@ void handle_movement(void)
 			else if (pObj == &shield)
 			{
 				player.shield_equipped = true;
+				player.shield_cd = 50;
+				player.shield_duration = 20;
 				shield.exists = false;
 				show_message (
 					"You've found"
 					" the shield "
-					"Keep enemies"
-					" on left to "
-					" block more "
-					"   damage",
+					"Press Shield"
+					"before enemy"
+					"hits to take"
+					"less damage ",
 					3000);
 			}
 			else if (pObj == &potion && player.health < 99)
@@ -655,10 +667,9 @@ void handle_movement(void)
 				potion.exists = false;
 				show_message (
 					"            "
-					" The health "
-					"   potion   "
-					"  restores  "
-					"    you",
+					"The potion  "
+					" restores   "
+					"your health ",
 					2000);
 			}
 			else // implement no-go zone for monsters!
@@ -1082,4 +1093,12 @@ void trace (unsigned char *message)
 		UART0_OutChar(*message);
 		message++;
 	}
+}
+
+// WARNING ensure values are on screen to prevent out of bounds array access!!
+void set_pixel(int screenx, int screeny)
+{
+	// put bounds check in while we have room in code
+	if (screenx < 0 || screeny < 0 || screenx >= SCREENW || screeny >= SCREENH) for (;;);
+	Screen[screeny/8*SCREENW+screenx] |= 1 << (screeny%8);
 }

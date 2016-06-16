@@ -64,7 +64,7 @@
 // Contrast value 0xB1 looks good on red SparkFun
 // and 0xB8 looks good on blue Nokia 5110.
 // Adjust this from 0xA0 (lighter) to 0xCF (darker) for your display.
-#define CONTRAST                0xB0
+#define CONTRAST                0xb8
 
 // This table contains the hex values that represent pixels
 // for a font that is 5 pixels wide and 8 pixels high
@@ -262,7 +262,7 @@ void myNokia5110_PrintBMP(int xpos, int ypos, const unsigned char *ptr);
 #ifndef THRESHOLD
 #define THRESHOLD 9
 #endif
-void myNokia5110_PrintResizedBMP(int xpos, int ypos, int target_width, const unsigned char *source_bitmap);
+void myNokia5110_PrintResizedBMP(int xpos, int ypos, int target_width, const unsigned char *source_bitmap, int animation);
 
 // There is a buffer in RAM that holds one screen
 // This routine clears this buffer

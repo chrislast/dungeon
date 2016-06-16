@@ -388,10 +388,10 @@ void Nokia5110_PrintBMP(unsigned char xpos, unsigned char ypos, const unsigned c
 
 /* Output a bitmap to the screen buffer */
 void myNokia5110_PrintBMP(int xpos, int ypos, const unsigned char *ptr){
-	myNokia5110_PrintResizedBMP(xpos, ypos, ptr[18], ptr);
+	myNokia5110_PrintResizedBMP(xpos, ypos, ptr[18], ptr,0);
 }
 
-void myNokia5110_PrintResizedBMP(int xpos, int ypos, int target_width, const unsigned char *source_bitmap)
+void myNokia5110_PrintResizedBMP(int xpos, int ypos, int target_width, const unsigned char *source_bitmap, int animation)
 {
 	int xscale8 = (source_bitmap[18] << 8) / target_width;
 	int target_height = (source_bitmap[22]<<8) / xscale8;
@@ -441,12 +441,17 @@ void myNokia5110_PrintResizedBMP(int xpos, int ypos, int target_width, const uns
 					bmp_data = pSRC[jSRC/2] & 0xF;  // use least significant nibble
 				else
 					bmp_data = pSRC[jSRC/2] >> 4;   // use most significant nibble
-				if (bmp_data == THRESHOLD)  // if bitmap data is on threshold
+				if (animation == 0)
+					bmp_data >>= 2;    // use most significant two bits for animation 1
+				else
+					bmp_data &= 0x03;  // use least significant two bits gfor animation 2
+				if (bmp_data == 2)  // if bitmap data holds a white pixel
 					// force white pixel
 					Screen[(screeny/8*SCREENW)+screenx] &= ~(0x01<<screeny%8);
-				else if (bmp_data > THRESHOLD) // if it is above threshold
+				else if (bmp_data == 3) // if bitmap data holds a black pixel
 					 // force black pixel
 					Screen[(screeny/8*SCREENW)+screenx] |= (0x01<<screeny%8);
+				// else it's a clear pixel so write nothing
 			}
 		}
 	}

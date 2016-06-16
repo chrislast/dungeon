@@ -31,5 +31,6 @@ void draw_fixed_objects(void);
 void handle_combat(void);
 void update_display(void);
 void display_small_int(char *screen_char, int value, int shift);
+void set_pixel(int screenx, int screeny);
 
 #endif

@@ -127,16 +127,35 @@ typedef enum ObjectTypeE
 	ITEM
 } ObjectTypeE;
 
+typedef struct EnemyData
+{
+	const unsigned char* combat_bitmap;
+	int atk_die_num;
+	int atk_die_sides;
+	int atk_speed;
+	int health;
+	// uninitialised data
+	PointXY screenpos;
+} EnemyData;
+
+typedef struct ItemData
+{
+	int unused;
+} ItemData;
+
+typedef union ObjectData
+{
+	EnemyData *enemy;
+	ItemData *item;
+} ObjectData;
+
 typedef struct Object
 {
 	const unsigned char* bitmap;
 	PointXYZ pos;
 	bool exists;
 	ObjectTypeE type;
-	int atk_die_num;
-	int atk_die_sides;
-	int atk_speed;
-	int health;
+	ObjectData data;
 	// uninitialised data
 	PointXY screenpos;
 } Object;
@@ -157,6 +176,9 @@ typedef struct Player
 	int last_attack_value;
 	int last_attack_time;
 	bool shield_active;
+	int shield_cd;
+	int last_shield_time;
+	int shield_duration;
 	Object *in_combat_with;
 } Player;
 
